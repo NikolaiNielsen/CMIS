@@ -1,0 +1,62 @@
+\documentclass[sigconf]{acmart}
+% defining the \BibTeX command - from Oren Patashnik's original BibTeX documentation.
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08emT\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+% Remove the annoying stuff
+\settopmatter{printacmref=false} % Removes citation information below abstract
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+\pagestyle{plain} % removes running headers
+
+
+
+\usepackage{Nikolai}
+
+
+
+
+\begin{document}
+
+%
+% The "title" command has an optional parameter, allowing the author to define a "short title" to be used in page headers.
+\title{CMIS Hand-in 1: Finite Difference Methods 1}
+
+\author{Nikolai Plambech Nielsen}
+\email{lpk331@alumni.ku.dk}
+\affiliation{%
+  \institution{Niels Bohr Institute, University of Copenhagen}
+}
+
+
+\maketitle
+
+\section{The Finite Difference Method}
+When solving differential equations on a computer, one has several options. In this hand-in the finite difference method (FDM) is explored.
+In general we are interested in calculating the evolution of a system with time over some domain, as it is governed by a partial differential equation. The domain is the ``space'' over which we solve the system, for example a line, surface or volume. We then sample this domain at a finite set of points, called the computational mesh. For this hand in we are dealing with a regular mesh. This means that we sample
+
+
+\section{L1A}
+The idea behind the finite difference method is to replace all derivatives in the equations with differences instead. This can be seen as not letting the spacing $ h $ in the differential quotient go all the way to zero, but just to some small value. Since we are working with regular grids, a convenient value is the spacing between points $ \Delta x $:
+\begin{equation}\label{key}
+	\diff[d]{f(x_i)}{x} = \lim\limits_{h\to 0} \frac{f(x_i + h) - f(x_i)}{(x_i+h) - x_i} \to \frac{f(x_i + \Delta x) - f(x_i)}{\Delta x}
+\end{equation}
+In this particular case, the finite difference is called the ``forward difference'' (FD) since it uses the point of interest $ x_i $ and the one next to it $ x_{i+1} = x_i + \Delta x $. In the compact notation we have
+\begin{equation}\label{key}
+	\diff[d]{f_i}{x} \approx \frac{f_{i+1} - f_{i}}{\Delta x}
+\end{equation}
+There is also the ``backwards difference'' (BD):
+\begin{equation}\label{key}
+	\diff[d]{f_i}{x} \approx \frac{f_{i} - f_{i-1}}{\Delta x}
+\end{equation}
+And the ``central difference'' (CD):
+\begin{equation}\label{key}
+	\diff[d]{f_i}{x} \approx \frac{f_{i+1} - f_{i-1}}{2 \Delta x}
+\end{equation}
+These can be shown explicitly from the Taylor Polynomials for $ f(x) $ around $ x_i $. There are of course also higher order differences. In particular we use the second order central difference when studying the heat equation, as this includes a second derivative:
+\begin{equation}\label{key}
+	\diff[d]{^2 f_i}{x^2} \approx \frac{f_{i-1} - 2f_i + f_{i+1}}{\Delta x^2}
+\end{equation}
+This, however, only takes care of calculating derivatives. What we want is to follow the evolution of the system with time. This means we have to do some sort of numerical time integration as well. But that is the subject of next weeks hand-in.
+
+\section{L1C}
+
+
+\end{document}
