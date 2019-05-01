@@ -30,7 +30,24 @@
 
 \section{The Finite Difference Method}
 When solving differential equations on a computer, one has several options. In this hand-in the finite difference method (FDM) is explored.
-In general we are interested in calculating the evolution of a system with time over some domain, as it is governed by a partial differential equation. The domain is the ``space'' over which we solve the system, for example a line, surface or volume. We then sample this domain at a finite set of points, called the computational mesh. For this hand in we are dealing with a regular mesh. This means that we sample
+In general we are interested in calculating the evolution of a system with time over some domain, as it is governed by a partial differential equation. The domain is the ``space'' over which we solve the system, for example a line, surface or volume. We then sample this domain at a finite set of points, called the nodes of the system. All nodes then need to be updated for the system to evolve in time. The computational mesh is then the collection of all nodes in our domain.
+
+For this hand in we are dealing with a regular mesh. This means that we sample the system at regular intervals in space, with a spacing of $ \Delta x $:
+\begin{figure}[H]
+	\includegraphics[width=\linewidth]{finite_difference1.png}
+\end{figure}
+With the $ x $-values given by:
+\begin{equation}\label{key}
+	x_i = x_0 + i \Delta x
+\end{equation}
+where $ x_0 $ is usually taken as the origin, for convenience. The sampled values of the system $ f(x_i) $ are then denoted in shorthand by
+\begin{equation}\label{key}
+	f_i \equiv f(x_i)
+\end{equation}
+This of course generalises to higher dimensional systems. For two dimensions we have $ y_j = y_0 + j \Delta y$, and $ f_{i,j} \equiv f(x_i, y_j) $, and more indices for even higher dimensions.
+
+
+
 
 
 \section{L1A}
@@ -55,6 +72,8 @@ These can be shown explicitly from the Taylor Polynomials for $ f(x) $ around $ 
 	\diff[d]{^2 f_i}{x^2} \approx \frac{f_{i-1} - 2f_i + f_{i+1}}{\Delta x^2}
 \end{equation}
 This, however, only takes care of calculating derivatives. What we want is to follow the evolution of the system with time. This means we have to do some sort of numerical time integration as well. But that is the subject of next weeks hand-in.
+
+There are some considerations to 
 
 \section{L1C}
 
