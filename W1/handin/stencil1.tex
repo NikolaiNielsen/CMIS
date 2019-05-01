@@ -1,0 +1,17 @@
+\documentclass[tikz]{standalone}
+
+
+\begin{document}
+	\def\radius{0.75}
+	\def\length{1.5}
+	\begin{tikzpicture}
+		\draw (0,0) circle [radius=\radius];
+		\draw (2*\radius + \length, 0) circle [radius = \radius];
+		\draw (-2*\radius - \length, 0) circle [radius = \radius];
+		\draw (\radius,0) -- (\radius+\length, 0);
+		\draw (-\radius, 0) -- (-\radius-\length, 0);
+		\node at (0,0) {$ f_i $};
+		\node at (\length + 2*\radius, 0) {$ f_{i+1} $};
+		\node at (-\length - 2*\radius, 0) {$ f_{i-1} $};
+	\end{tikzpicture}
+\end{document}
