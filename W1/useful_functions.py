@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 def linspace_with_ghosts(a, b, n):
     """
@@ -21,14 +22,14 @@ def plot_without_ghosts(x, y, z, ax, **kwargs):
 
 
 def pretty_plotting(fig, ax, 
-                    f_type='Times',
+                    f_type='serif',
                     f_size=12, 
                     paper_w=21,
                     paper_h=9*21/16,
-                    title='',
-                    xlabel='',
-                    ylabel='',
-                    filename='figure.pdf'):
+                    title=None,
+                    xlabel=None,
+                    ylabel=None,
+                    filename=None):
     # in the boilerplate code we set the axis to have a width/height of
     # 1280/720 pixels, with a 100 pixel border. We work in inches in
     # matplotlib, so we just create the same "aspect ratio"
@@ -36,4 +37,8 @@ def pretty_plotting(fig, ax,
     inches = 1/2.54
     fig.set_size_inches(paper_w*inches, paper_h*inches)
     ax.set_position([border, border, 1-2*border, 1-2*border])
-    # fig.savefig(filename)
+    ax.set_xlabel(xlabel, fontsize=f_size, fontfamily=f_type)
+    ax.set_ylabel(ylabel, fontsize=f_size, fontfamily=f_type)
+    ax.set_title(title, fontsize=f_size, fontfamily=f_type)
+    if filename is not None:
+        fig.savefig(filename)

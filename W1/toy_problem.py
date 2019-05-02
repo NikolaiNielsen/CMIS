@@ -40,7 +40,6 @@ def index_helper(i, j, m):
 N = 4
 x, dx = uf.linspace_with_ghosts(0, 1, N)
 dy = dx
-print(dx)
 y = x.copy()
 xx, yy = np.meshgrid(x, y)
 n, m = xx.shape
