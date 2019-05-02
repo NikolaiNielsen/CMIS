@@ -3,6 +3,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import useful_functions as uf
 
 # lap U - k^2 u = f, k>0, f(x,y)
 # du/dx = 0 for vert boundaries
@@ -33,9 +34,14 @@ def index_helper(i, j, m):
     # number), m being column count and i being row number 
     return m*i+j
 
-dx, dy = 1/3, 1/3
-y = np.arange(-dy, 1 + 2*dy, dy)
-x = np.arange(-dx, 1 + 2*dx, dx)
+# dx, dy = 1/3, 1/3
+# y = np.arange(-dy, 1 + 2*dy, dy)
+# x = np.arange(-dx, 1 + 2*dx, dx)
+N = 4
+x, dx = uf.linspace_with_ghosts(0, 1, N)
+dy = dx
+print(dx)
+y = x.copy()
 xx, yy = np.meshgrid(x, y)
 n, m = xx.shape
 u = np.zeros_like(xx)
@@ -62,6 +68,10 @@ for i in range(n):
         corners = ((ghost_bottom * ghost_left) + (ghost_bottom * ghost_right) + 
                    (ghost_top * ghost_left) + (ghost_top * ghost_right))
 
+        # remember to set f = 0 for ghost nodes, to preserve boundary
+        # conditions.
+        if ghost:
+            f[i,j] = 0
         top_i = np.array([0, 2])
         top_j = np.array([j, j])
         top_indices = index_helper(top_i, top_j, m)
@@ -107,9 +117,11 @@ for i in range(n):
 
 F = f.flatten()
 U = np.linalg.solve(A,F)
-u = U.reshape((6, 6))
+u = U.reshape((n, m))
 fig = plt.figure()
 ax = fig.gca(projection='3d')
-ax.plot_surface(xx[1:-1, 1:-1], yy[1:-1, 1:-1], u[1:-1, 1:-1])
+# ax.plot_surface(xx,yy,u,)
+uf.plot_without_ghosts(xx, yy, u, ax, cmap='jet')
+uf.pretty_plotting(fig, ax)
 plt.show()
 
