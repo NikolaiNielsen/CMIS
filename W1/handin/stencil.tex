@@ -2,23 +2,23 @@
 
 
 \begin{document}
-	\def\radius{0.75}
-	\def\length{1.5}
+	\def\radius{0.5}
+	\def\length{1}
 	\begin{tikzpicture}
 		\draw (0,0) circle [radius=\radius];
 		\draw (2*\radius + \length, 0) circle [radius = \radius];
 		\draw (-2*\radius - \length, 0) circle [radius = \radius];
 		\draw (\radius,0) -- (\radius+\length, 0);
 		\draw (-\radius, 0) -- (-\radius-\length, 0);
-		\node at (0,0) {$ f_{i, j} $};
-		\node at (\length + 2*\radius, 0) {$ f_{i+1, j} $};
-		\node at (-\length - 2*\radius, 0) {$ f_{i-1, j} $};
+		\node at (0,0) {$ u_{i, j} $};
+		\node at (\length + 2*\radius, 0) {$ u_{i+1, j} $};
+		\node at (-\length - 2*\radius, 0) {$ u_{i-1, j} $};
 		
 		\draw (0, \length + 2*\radius) circle [radius=\radius];
 		\draw (0, -\length - 2*\radius) circle [radius=\radius];
 		\draw (0, \radius) -- (0,\radius+\length);
 		\draw (0, -\radius) -- (0,-\radius-\length);
-		\node at (0, \length + 2*\radius) {$ f_{i, j+1} $};
-		\node at (0, -\length - 2*\radius) {$ f_{i, j-1} $};
+		\node at (0, \length + 2*\radius) {$ u_{i, j+1} $};
+		\node at (0, -\length - 2*\radius) {$ u_{i, j-1} $};
 	\end{tikzpicture}
 \end{document}
