@@ -23,7 +23,8 @@ def plot_without_ghosts(x, y, z, ax, **kwargs):
 
 def pretty_plotting(fig, ax, 
                     f_type='serif',
-                    f_size=12, 
+                    f_size=12,
+                    view=None,
                     paper_w=21,
                     paper_h=9*21/16,
                     title=None,
@@ -40,5 +41,10 @@ def pretty_plotting(fig, ax,
     ax.set_xlabel(xlabel, fontsize=f_size, fontfamily=f_type)
     ax.set_ylabel(ylabel, fontsize=f_size, fontfamily=f_type)
     ax.set_title(title, fontsize=f_size, fontfamily=f_type)
+    if view is not None:
+        ax.view_init(*view)
+
+    fig.tight_layout()
+    
     if filename is not None:
         fig.savefig(filename)

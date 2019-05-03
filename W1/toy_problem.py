@@ -37,7 +37,7 @@ def index_helper(i, j, m):
 # dx, dy = 1/3, 1/3
 # y = np.arange(-dy, 1 + 2*dy, dy)
 # x = np.arange(-dx, 1 + 2*dx, dx)
-N = 4
+N = 100
 x, dx = uf.linspace_with_ghosts(0, 1, N)
 dy = dx
 y = x.copy()
@@ -114,6 +114,9 @@ for i in range(n):
         elif corners:
             A[node_index, node_index] = 1
 
+
+
+
 F = f.flatten()
 U = np.linalg.solve(A,F)
 u = U.reshape((n, m))
@@ -121,6 +124,29 @@ fig = plt.figure()
 ax = fig.gca(projection='3d')
 # ax.plot_surface(xx,yy,u,)
 uf.plot_without_ghosts(xx, yy, u, ax, cmap='jet')
-uf.pretty_plotting(fig, ax)
-plt.show()
+uf.pretty_plotting(fig, ax, title='2D Toy Problem',
+                   xlabel='$x$',
+                   ylabel='$y$',
+                   view=(30,40),
+                   filename='result3.pdf')
+u_inner = u[1:-1,1:-1]
+print(f'max: {u_inner[0,0]}')
+print(f'min: {u_inner[-1,-1]}')
 
+#%% calculate derivatives of borders
+left_deriv = (u[1:-1, 2] - u[1:-1, 0])/(2*dx)
+right_deriv = (u[1:-1, -3] - u[1:-1, -1])/(2*dx)
+top_deriv = (u[2, 1:-1] - u[0, 1:-1])/(2*dy)
+bottom_deriv = (u[-3, 1:-1] - u[-1, 1:-1])/(2*dy)
+
+fig, ax = plt.subplots()
+ax.plot(left_deriv, '-', label='left boundary')
+ax.plot(right_deriv, '-', label='right boundary')
+ax.plot(top_deriv, '-', label='top boundary')
+ax.plot(bottom_deriv, '-', label='bottom boundary')
+ax.legend()
+uf.pretty_plotting(fig, ax,
+                   title='Central difference derivatives at borders',
+                   xlabel='Node number',
+                   ylabel='Derivative',
+                   filename='derivative3.pdf')
