@@ -69,26 +69,42 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
     dy = (ylim[1] - ylim[0]) / Ny
 
 
-
+    # copy starting values. Never know when it might come in handy
     xx_start = xx.copy()
     yy_start = yy.copy()
     phi_start = phi.copy()
+
+    # Setup to record coordinates of max(phi)
+    max_phi_points = np.zeros((2, Nt + 1))
+    max_arg = np.argmax(phi)
+    point_x = xx.flatten()[max_arg]
+    point_y = yy.flatten()[max_arg]
+    max_phi_points[:, 0] = [point_x, point_y]
+
+
     # run simulation
-    for _ in range(Nt):
+    for i in range(1, Nt+1):
         xx, yy, phi, ux, uy = sim_next_step(xx, yy, phi, dt, ux, uy,
                                             f_u, method, fill)
-    return xx, yy, phi, (xx_start, yy_start, phi_start)
+        max_arg = np.argmax(phi)
+        point_x = xx_start.flatten()[max_arg]
+        point_y = yy_start.flatten()[max_arg]
+        max_phi_points[:, i] = [point_x, point_y]
+    
+    return xx, yy, phi, (xx_start, yy_start, phi_start), max_phi_points
 
 
 
 
 
 if __name__ == "__main__":
-    xx, yy, phi, obj = run_sim(Nx=100, Ny=100, 
+    xx, yy, phi, obj, points = run_sim(Nx=100, Ny=100, 
                                     Nt = 20, method='cubic')
     fig, ax = plt.subplots(ncols=2, subplot_kw=dict(projection='3d'))
     ax = ax.flatten()
     ax[0].plot_surface(obj[0], obj[1], obj[2])
     ax[1].plot_surface(xx, yy, phi)
-    
+
+    fig2, ax2 = plt.subplots()
+    ax2.scatter(points[0], points[1])
     plt.show()
