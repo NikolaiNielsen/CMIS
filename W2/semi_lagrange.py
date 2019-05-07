@@ -68,12 +68,20 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
     xx_start = xx.copy()
     yy_start = yy.copy()
     phi_start = phi.copy()
-
+    int_ = uf.calc_residual(phi, np.zeros_like(phi))
     # run simulation
-    for i in range(Nt):
+    for _ in range(Nt):
         xx, yy, phi, ux, uy = sim_next_step(xx, yy, phi, dt, ux, uy,
                                             f_u, method, fill)
+        int_ = uf.calc_residual(phi, np.zeros_like(phi))
+        residual = uf.calc_residual(phi_start, phi)
+    return residual, xx, yy, phi, (xx_start, yy_start, phi_start)
     
-    residual = uf.calc_residual(phi_start, phi)
-    return residual
-    
+
+if __name__ == "__main__":
+    res, xx, yy, phi, obj = run_sim(Nt = 100, method='cubic')
+    fig, ax = plt.subplots(ncols=2, subplot_kw=dict(projection='3d'))
+    ax = ax.flatten()
+    ax[0].plot_surface(obj[0], obj[1], obj[2])
+    ax[1].plot_surface(xx, yy, phi)
+    plt.show()
