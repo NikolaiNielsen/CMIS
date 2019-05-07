@@ -79,7 +79,7 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
     
 
 if __name__ == "__main__":
-    res, xx, yy, phi, obj = run_sim(Nt = 100, method='cubic')
+    res, xx, yy, phi, obj = run_sim(Nt = 6, method='cubic')
     fig, ax = plt.subplots(ncols=2, subplot_kw=dict(projection='3d'))
     ax = ax.flatten()
     ax[0].plot_surface(obj[0], obj[1], obj[2])
