@@ -32,18 +32,30 @@ def create_phi(Nx=50, Ny=50, xlim=[-10, 10], ylim=[-10, 10]):
 
     return xx, yy, phi
 
-xmin, xmax = -10, 10
-ymin, ymax = -10, 10
-Nx = 50
-Ny = 50
-dt = 1
 
-num_steps = 2*np.pi / dt 
+def f_u(xx, yy):
+    return yy, -xx
+
+
+def sim_next_step(xx, yy, phi, dt, ux, uy, f_u, method='linear', fill=0):
+    """
+    Generates the next timestep for the advection equation of some scalar field
+    with associated velocity field
+    """
+    x_new = xx - dt * ux
+    y_new = yy - dt * uy
+    ux, uy = f_u(x_new, y_new)
+
+    flattened_points = np.vstack((xx.flatten(), yy.flatten())).T
+    flattened_values = phi.flatten()
+    phi = interpolate.griddata(flattened_points, flattened_values,
+                               (x_new, y_new), method=method,
+                               fill_value=fill)
+    return x_new, y_new, phi, ux, uy
+
 
 xx, yy, phi = create_phi()
-
-zmin = np.amin(phi)
-zmax = np.amax(phi)
+uu, uy = f_u(xx, yy)
 
 fig, axes = plt.subplots(subplot_kw=dict(projection='3d'))
 axes.plot_surface(xx, yy, phi, cmap='jet')
