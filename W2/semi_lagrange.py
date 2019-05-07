@@ -93,7 +93,7 @@ def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
     Function to run the simulation several time and plot results.
     """
     Nxs2, Nts2 = np.meshgrid(Nxs, Nts)
-    error_matrix = np.zeros_like(Nxs2)
+    error_matrix = np.zeros(Nxs2.shape)
 
     for i in range(Nxs2.shape[0]):
         for j in range(Nxs2.shape[1]):
@@ -112,13 +112,16 @@ def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
 
 
 if __name__ == "__main__":
-    xx, yy, phi, phi_start, points = run_sim(Nx=100, Ny=100, 
-                                    Nt = 100, method='cubic')
-    fig, ax = plt.subplots(ncols=2, subplot_kw=dict(projection='3d'))
-    ax = ax.flatten()
-    ax[0].plot_surface(xx, yy, phi_start)
-    ax[1].plot_surface(xx, yy, phi)
+    Nx = np.arange(50, 550, 50)
+    Nt = np.arange(10, 60, 10)
 
-    fig2, ax2 = plt.subplots()
-    ax2.plot(points[0], points[1], marker='o', linestyle='-')
+    error_matrix = calc_error(Nx, Nt)
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.plot_surface(Nx, Nt, error_matrix)
+    uf.pretty_plotting(fig, ax,
+                       title="RMS of difference between start and end $\phi$",
+                       xlabel='Number of points per axis',
+                       ylabel='Number of steps per simulation')
     plt.show()
+
