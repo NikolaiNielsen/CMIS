@@ -54,24 +54,26 @@ def sim_next_step(xx, yy, phi, dt, ux, uy, f_u, method='linear', fill=0):
     return x_new, y_new, phi, ux, uy
 
 
-xx, yy, phi = create_phi()
-uu, uy = f_u(xx, yy)
+def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10], 
+            f_u=f_u, method='linear', fill=0):
+    """
+    Runs the actual advection simulation
+    """
 
-fig, axes = plt.subplots(subplot_kw=dict(projection='3d'))
-axes.plot_surface(xx, yy, phi, cmap='jet')
-axes.set_title('0')
-axes.view_init(90, 0)
-# for i in range(1,6):
-#     xx = xx - dt * (-yy)
-#     yy = yy - dt * (xx)
+    # setup:
+    xx, yy, phi = create_phi(Nx, Ny, xlim, ylim)
+    ux, uy = f_u(xx, yy)
+    dt = 2*np.pi/Nt
 
-#     flattened_points = np.vstack((xx.flatten(), yy.flatten())).T
-#     flattened_values = zz.flatten()
-#     zz = interpolate.griddata(flattened_points, flattened_values,
-#                               (xx, yy), method='linear', fill_value=0)
-#     axes[i].plot_surface(xx, yy, zz, cmap='jet')
-#     axes[i].set_title(str(i))
-#     axes[i].view_init(90, 0)
+    xx_start = xx.copy()
+    yy_start = yy.copy()
+    phi_start = phi.copy()
 
-fig.tight_layout()
-plt.show()
+    # run simulation
+    for i in range(Nt):
+        xx, yy, phi, ux, uy = sim_next_step(xx, yy, phi, dt, ux, uy,
+                                            f_u, method, fill)
+    
+    residual = uf.calc_residual(phi_start, phi)
+    return residual
+    
