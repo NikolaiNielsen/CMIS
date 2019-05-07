@@ -3,6 +3,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import sys
+sys.path.append('../')
 import useful_functions as uf
 
 # lap U - k^2 u = f, k>0, f(x,y)

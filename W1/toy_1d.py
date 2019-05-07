@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+sys.path.append('../')
 import useful_functions as uf
 
 a, b, n = 0, 1, 6
