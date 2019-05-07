@@ -20,7 +20,7 @@ def create_phi(Nx=50, Ny=50, xlim=[-10, 10], ylim=[-10, 10]):
     sigma_xs = [1] #, 1, 2, 0.8]
     sigma_ys = [1] #, 1, 0.5, 1]
     As = [1] #, 0.7, -0.5, 1]
-    mu_xs = [2] #, 3, 0, -3]
+    mu_xs = [3] #, 3, 0, -3]
     mu_ys = [0] #, 0, -3, 0]
 
     # Create the field through addition
@@ -38,21 +38,20 @@ def f_u(xx, yy):
     return yy, -xx
 
 
-def sim_next_step(xx, yy, phi, dt, ux, uy, f_u, method='linear', fill=0):
+def sim_next_step(xx, yy, phi, dt, ux, uy, method='linear', fill=0):
     """
     Generates the next timestep for the advection equation of some scalar field
     with associated velocity field
     """
     x_new = xx - dt * ux
     y_new = yy - dt * uy
-    ux, uy = f_u(x_new, y_new)
 
     flattened_points = np.vstack((xx.flatten(), yy.flatten())).T
     flattened_values = phi.flatten()
     phi = interpolate.griddata(flattened_points, flattened_values,
                                (x_new, y_new), method=method,
                                fill_value=fill)
-    return x_new, y_new, phi, ux, uy
+    return phi
 
 
 def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10], 
@@ -65,13 +64,8 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
     xx, yy, phi = create_phi(Nx, Ny, xlim, ylim)
     ux, uy = f_u(xx, yy)
     dt = 2*np.pi/Nt
-    dx = (xlim[1] - xlim[0]) / Nx
-    dy = (ylim[1] - ylim[0]) / Ny
-
 
     # copy starting values. Never know when it might come in handy
-    xx_start = xx.copy()
-    yy_start = yy.copy()
     phi_start = phi.copy()
 
     # Setup to record coordinates of max(phi)
@@ -81,30 +75,50 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
     point_y = yy.flatten()[max_arg]
     max_phi_points[:, 0] = [point_x, point_y]
 
-
     # run simulation
     for i in range(1, Nt+1):
-        xx, yy, phi, ux, uy = sim_next_step(xx, yy, phi, dt, ux, uy,
-                                            f_u, method, fill)
+        phi = sim_next_step(xx, yy, phi, dt, ux, uy,
+                            method, fill)
         max_arg = np.argmax(phi)
-        point_x = xx_start.flatten()[max_arg]
-        point_y = yy_start.flatten()[max_arg]
+        point_x = xx.flatten()[max_arg]
+        point_y = yy.flatten()[max_arg]
         max_phi_points[:, i] = [point_x, point_y]
     
-    return xx, yy, phi, (xx_start, yy_start, phi_start), max_phi_points
+    return xx, yy, phi, phi_start, max_phi_points
 
 
+def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
+               f_u=f_u, method='linear', fill=0):
+    """
+    Function to run the simulation several time and plot results.
+    """
+    Nxs2, Nts2 = np.meshgrid(Nxs, Nts)
+    error_matrix = np.zeros_like(Nxs2)
 
+    for i in range(Nxs2.shape[0]):
+        for j in range(Nxs2.shape[1]):
+            Nx = Nxs2[i, j]
+            Nt = Nts2[i, j]
+
+            _, _, phi, phi_start, _ = run_sim(Nx, Nx, Nt, xlim, ylim, f_u, 
+                                              method, fill)
+            
+            residual = uf.calc_residual(phi, phi_start)
+            error_matrix[i, j] = residual
+
+    return error_matrix
+
+    
 
 
 if __name__ == "__main__":
-    xx, yy, phi, obj, points = run_sim(Nx=100, Ny=100, 
-                                    Nt = 20, method='cubic')
+    xx, yy, phi, phi_start, points = run_sim(Nx=100, Ny=100, 
+                                    Nt = 100, method='cubic')
     fig, ax = plt.subplots(ncols=2, subplot_kw=dict(projection='3d'))
     ax = ax.flatten()
-    ax[0].plot_surface(obj[0], obj[1], obj[2])
+    ax[0].plot_surface(xx, yy, phi_start)
     ax[1].plot_surface(xx, yy, phi)
 
     fig2, ax2 = plt.subplots()
-    ax2.scatter(points[0], points[1])
+    ax2.plot(points[0], points[1], marker='o', linestyle='-')
     plt.show()
