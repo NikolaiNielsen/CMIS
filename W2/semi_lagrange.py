@@ -17,18 +17,19 @@ def create_phi(Nx=50, Ny=50, xlim=[-10, 10], ylim=[-10, 10]):
     xx, yy = np.meshgrid(x, y)
 
     # parameters for the peaks
-    sigma_xs = [0.5, 1, 2, 0.8]
-    sigma_ys = [0.5, 1, 0.5, 1]
-    As = [-0.2, 0.7, -0.5, 1]
-    mu_xs = [0, 3, 0, -3]
-    mu_ys = [3, 0, -3, 0]
+    sigma_xs = [1] #, 1, 2, 0.8]
+    sigma_ys = [1] #, 1, 0.5, 1]
+    As = [1] #, 0.7, -0.5, 1]
+    mu_xs = [2] #, 3, 0, -3]
+    mu_ys = [0] #, 0, -3, 0]
 
     # Create the field through addition
     phi = np.zeros_like(xx)
     for sigma_x, sigma_y, A, mu_y, mu_x in zip(sigma_xs, sigma_ys,
                                                As, mu_ys, mu_xs):
-        phi += A * np.exp(-(xx-mu_x)**2/(2*sigma_x**2) -
-                          (yy-mu_y)**2/(2*sigma_y**2))
+        phi += (A /(2*np.pi * sigma_x * sigma_y) * 
+                np.exp(-(xx-mu_x)**2/(2*sigma_x**2) -
+                        (yy-mu_y)**2/(2*sigma_y**2)))
 
     return xx, yy, phi
 
@@ -64,24 +65,30 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
     xx, yy, phi = create_phi(Nx, Ny, xlim, ylim)
     ux, uy = f_u(xx, yy)
     dt = 2*np.pi/Nt
+    dx = (xlim[1] - xlim[0]) / Nx
+    dy = (ylim[1] - ylim[0]) / Ny
+
+
 
     xx_start = xx.copy()
     yy_start = yy.copy()
     phi_start = phi.copy()
-    int_ = uf.calc_residual(phi, np.zeros_like(phi))
     # run simulation
     for _ in range(Nt):
         xx, yy, phi, ux, uy = sim_next_step(xx, yy, phi, dt, ux, uy,
                                             f_u, method, fill)
-        int_ = uf.calc_residual(phi, np.zeros_like(phi))
-        residual = uf.calc_residual(phi_start, phi)
-    return residual, xx, yy, phi, (xx_start, yy_start, phi_start)
-    
+    return xx, yy, phi, (xx_start, yy_start, phi_start)
+
+
+
+
 
 if __name__ == "__main__":
-    res, xx, yy, phi, obj = run_sim(Nt = 6, method='cubic')
+    xx, yy, phi, obj = run_sim(Nx=100, Ny=100, 
+                                    Nt = 20, method='cubic')
     fig, ax = plt.subplots(ncols=2, subplot_kw=dict(projection='3d'))
     ax = ax.flatten()
     ax[0].plot_surface(obj[0], obj[1], obj[2])
     ax[1].plot_surface(xx, yy, phi)
+    
     plt.show()
