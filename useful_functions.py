@@ -48,3 +48,15 @@ def pretty_plotting(fig, ax,
     
     if filename is not None:
         fig.savefig(filename)
+
+
+def calc_residual(x1, x2):
+    """
+    Calculates the residual between two arrays x1 and x2, as an RMS of their
+    differences.
+    """
+
+    diff = x2-x1
+    square = diff ** 2
+    mean = np.sum(square)/square.size
+    return mean
