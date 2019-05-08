@@ -5,6 +5,7 @@ import sys
 sys.path.append('../')
 import useful_functions as uf
 from scipy import interpolate
+from progress.bar import Bar
 
 
 def create_phi(Nx=50, Ny=50, xlim=[-10, 10], ylim=[-10, 10]):
@@ -55,7 +56,7 @@ def sim_next_step(xx, yy, phi, dt, ux, uy, method='linear', fill=0):
 
 
 def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10], 
-            f_u=f_u, method='linear', fill=0):
+            f_u=f_u, method='linear', fill=0, with_prog=False):
     """
     Runs the actual advection simulation
     """
@@ -75,6 +76,7 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
     point_y = yy.flatten()[max_arg]
     max_phi_points[:, 0] = [point_x, point_y]
 
+    bar = Bar('Simulating', max=Nt)
     # run simulation
     for i in range(1, Nt+1):
         phi = sim_next_step(xx, yy, phi, dt, ux, uy,
@@ -83,7 +85,8 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
         point_x = xx.flatten()[max_arg]
         point_y = yy.flatten()[max_arg]
         max_phi_points[:, i] = [point_x, point_y]
-    
+        bar.next()
+    bar.finish()
     return xx, yy, phi, phi_start, max_phi_points
 
 
@@ -92,6 +95,7 @@ def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
     """
     Function to run the simulation several time and plot results.
     """
+    save_file = "backup"
     Nxs2, Nts2 = np.meshgrid(Nxs, Nts)
     error_matrix = np.zeros(Nxs2.shape)
 
@@ -105,22 +109,27 @@ def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
             
             residual = uf.calc_residual(phi, phi_start)
             error_matrix[i, j] = residual
+            np.save(save_file, error_matrix)
+            print(f'Done: i: {i}/{Nts.size-1}, j: {j}/{Nxs.size-1}')
+            
 
-    return error_matrix
+    return Nxs2, Nts2, error_matrix
 
     
 
 
 if __name__ == "__main__":
-    Nx = np.arange(50, 550, 50)
-    Nt = np.arange(10, 60, 10)
 
-    error_matrix = calc_error(Nx, Nt)
+    Nx = np.arange(10, 210, 10)
+    Nt = np.arange(10, 200, 10)
+    Nxs, Nts = np.meshgrid(Nx, Nt)
+    error_matrix = np.load('large_error.npy')
+    # Nxs, Nts, error_matrix = calc_error(Nx, Nt)
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    ax.plot_surface(Nx, Nt, error_matrix)
+    ax.plot_surface(Nxs, Nts, error_matrix)
     uf.pretty_plotting(fig, ax,
-                       title="RMS of difference between start and end $\phi$",
+                       title=r"RMS of difference between start and end $\phi$",
                        xlabel='Number of points per axis',
                        ylabel='Number of steps per simulation')
     plt.show()
