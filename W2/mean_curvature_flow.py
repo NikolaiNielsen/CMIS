@@ -6,7 +6,7 @@ import useful_functions as uf
 from mpl_toolkits.mplot3d import Axes3D
 from scipy import ndimage
 import imageio
-
+from progress.bar import Bar
 
 bwdist = ndimage.morphology.distance_transform_edt
 
@@ -77,7 +77,7 @@ def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=False, animate=None):
         fig, ax = animate
         ax.imshow(phi)
         fig.show()
-
+    bar = Bar('Simulating', max=Nt)
     for n in range(Nt):
         phi_old = phi.copy()
         phi_temp = np.zeros_like(phi_old)
@@ -88,7 +88,8 @@ def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=False, animate=None):
         if animate is not None:
             ax.imshow(phi)
             plt.draw()
-        print(f'n: {n+1}/{Nt}')
+        bar.next()
+    bar.finish()
 
     
     return phi
@@ -129,4 +130,4 @@ def plot_results(Nt, T, clamp_g=False, use_eps=True):
 
 
 if __name__ == "__main__":
-    plot_results(3000, 100)
+    plot_results(4000, 1000)
