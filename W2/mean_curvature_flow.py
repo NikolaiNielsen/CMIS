@@ -61,8 +61,7 @@ def calc_k_on_domain(phi, deltax, deltay, use_eps=False):
 
     # Code for clamping k: k = max(-kappa, min(k, kappa))
     kappa = 1/max(deltax, deltay)
-    k[k>=kappa] = kappa
-    k[k<=-kappa] = kappa
+    k = np.maximum(-kappa, np.minimum(k, kappa))
     return k
 
 
