@@ -21,7 +21,7 @@ def bw2phi(I):
     return phi
 
 
-def grey_to_sdf(name):
+def grey_to_sdf(name, ghosts=True):
     """
     Read an image as a grayscale image, converts to integers, and then returns
     the signed distance field
@@ -29,8 +29,33 @@ def grey_to_sdf(name):
     im = imageio.imread(name, as_gray=True)
     im = im.astype(np.int)
     phi = bw2phi(im)
+    phi = add_ghost_nodes(phi)
     return phi
 
+
+def add_ghost_nodes(phi):
+    """
+    Adds a border of ghost nodes to the array
+    """
+    N, M = phi.shape
+    a = np.zeros((N+2, M+2))
+    a[1:-1, 1:-1] = phi
+    return a
+
+
+def update_boundary_conditions(phi):
+    left = phi[0:4, 1:-1]
+    right = phi[-3:, 1:-1]
+    top = phi[1:-1, 0:4]
+    bottom = phi[1:-1, -3:]
+    print(left.shape)
+    
+    phi[left[0]] = phi[left[1]] + phi[left[2]] - phi[left[3]]
+    phi[top[0]] = phi[top[1]] + phi[top[2]] - phi[top[3]]
+    phi[right[0]] = phi[right[1]] + phi[right[2]] - phi[right[3]]
+    phi[bottom[0]] = phi[bottom[1]] + phi[bottom[2]] - phi[bottom[3]]
+    phi[[0,0, -1,-1],[0,-1,0,-1]] = 0
+    return phi
 
 def calc_k_on_domain(phi, deltax, deltay, use_eps=False):
 
@@ -66,17 +91,17 @@ def calc_k_on_domain(phi, deltax, deltay, use_eps=False):
     return k
 
 
-def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=False):
+def run_sim(phi, dt=1/3, T=1, clamp_g=False, use_eps=False):
     """
     Function to run the simulation
     """
-    N, M = phi.shape
     dx, dy = 1, 1
-    dt = T/Nt
+    Nt = np.ceil(T/dt).astype(int)
     bar = Bar('Simulating', max=Nt)
     for n in range(Nt):
         phi_old = phi.copy()
         phi_temp = np.zeros_like(phi_old)
+        phi_temp = update_boundary_conditions(phi_temp)
         phi_temp[1:-1, 1:-1] = dt * calc_k_on_domain(phi, dx, dy,
                                                      use_eps)
         phi = phi_old + phi_temp
@@ -92,7 +117,6 @@ def calc_area_contour(contourplot, level_n=0):
         vertices = cont.vertices
         x, y = vertices.T
         area += np.abs(0.5*np.sum(y[:-1]*np.diff(x) - x[:-1]*np.diff(y)))
-    
     return area
 
 
@@ -123,22 +147,22 @@ def plot_series(ncols=5, nrows=2, T=1):
     plt.show()
 
 
-def plot_results(Nt, T, clamp_g=False, use_eps=True):
+def plot_results(dt, T, clamp_g=False, use_eps=True):
     phi = grey_to_sdf('example.bmp')
+    phi_plot = phi[1:-1, 1:-1]
     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3)
-    ax1.imshow(phi, cmap='Greys_r')
-    ax1.contour(phi, levels=0)
+    ax1.imshow(phi_plot, cmap='Greys_r')
+    ax1.contour(phi_plot, levels=0)
 
-    phi_end = run_sim(phi, Nt, T, clamp_g, use_eps)
-    ax2.imshow(phi_end, cmap='Greys_r')
-    ax2.contour(phi_end, levels=0)
+    phi_end = run_sim(phi, dt, T, clamp_g, use_eps)
+    phi_end_plot = phi_end[1:-1, 1:-1]
+    ax2.imshow(phi_end_plot, cmap='Greys_r')
+    ax2.contour(phi_end_plot, levels=0)
 
     im = SDF_to_BW(phi_end)
     ax3.imshow(im, cmap='Greys_r')
-
-
-    # plt.show()
+    plt.show()
 
 
 if __name__ == "__main__":
-    plot_results(40000, 10000)
+    plot_results(0.25, 100)
