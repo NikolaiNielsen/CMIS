@@ -129,4 +129,4 @@ def plot_results(Nt, T, clamp_g=False, use_eps=True):
 
 
 if __name__ == "__main__":
-    plot_results(1000, 20)
+    plot_results(3000, 100)
