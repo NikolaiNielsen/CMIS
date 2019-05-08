@@ -77,7 +77,7 @@ def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=True, animate=None):
 
     for n in range(Nt):
         phi_old = phi.copy()
-        phi_temp = phi.copy()
+        phi_temp = np.zeros_like(phi_old)
         phi_temp[1:-1, 1:-1] = dt * calc_k_on_domain(phi, dx, dy,
                                                      clamp_g, use_eps)
         phi = phi_old + phi_temp
