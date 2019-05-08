@@ -44,16 +44,20 @@ def add_ghost_nodes(phi):
 
 
 def update_boundary_conditions(phi):
-    left = phi[0:4, 1:-1]
+    """
+    Updates the boundary conditions. We use natural boundary conditions where
+    Dx(phi_ghost) = Dx(phi_boundary) on vertical boundaries. This means that
+    phi_0 = phi_1 + phi_2 - phi_3 
+    """
+    left = phi[0:3, 1:-1]
     right = phi[-3:, 1:-1]
-    top = phi[1:-1, 0:4]
+    top = phi[1:-1, 0:3]
     bottom = phi[1:-1, -3:]
-    print(left.shape)
-    
-    phi[left[0]] = phi[left[1]] + phi[left[2]] - phi[left[3]]
-    phi[top[0]] = phi[top[1]] + phi[top[2]] - phi[top[3]]
-    phi[right[0]] = phi[right[1]] + phi[right[2]] - phi[right[3]]
-    phi[bottom[0]] = phi[bottom[1]] + phi[bottom[2]] - phi[bottom[3]]
+
+    phi[0,1:-1] =   left[0]     + left[1]     - left[2]  
+    phi[1:-1,0] =   top[:,0]    + top[:,1]    - top[:,2]   
+    phi[1:-1,-1] =  bottom[:,0] + bottom[:,1] - bottom[:,2]
+    phi[-1,1:-1] =  right[0]    + right[1]    - right[2] 
     phi[[0,0, -1,-1],[0,-1,0,-1]] = 0
     return phi
 
