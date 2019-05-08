@@ -10,6 +10,7 @@ from progress.bar import Bar
 
 bwdist = ndimage.morphology.distance_transform_edt
 
+
 def bw2phi(I):
     phi = bwdist(np.amax(I)-I) - bwdist(I)
     ind = phi > 0
@@ -17,7 +18,6 @@ def bw2phi(I):
     ind = phi < 0
     phi[ind] = phi[ind] + 0.5
     return phi
-
 
 
 def grey_to_sdf(name):
@@ -91,9 +91,14 @@ def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=False, animate=None):
         bar.next()
     bar.finish()
 
-    
     return phi
-    
+
+
+def SDF_to_BW(phi):
+    im = np.zeros_like(phi)
+    im[phi<0] = 255
+    return im
+
 
 def plot_first():
     phi = grey_to_sdf('example.bmp')
