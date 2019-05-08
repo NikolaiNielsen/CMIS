@@ -31,18 +31,35 @@ def grey_to_sdf(name):
     return phi
 
 
-def calc_k_ij_domain(phi, i, j, deltax, deltay, clamp_g=False, use_eps=True):
-    Dx = (phi[i+1, j] - phi[i-1, j]/2)*deltax
-    Dy = (phi[i, j+1] - phi[i, j-1]/2)*deltay
-    Dxx = (phi[i+1, j] - 2*phi[i,j] + phi[i-1, j])/(deltax**2)
-    Dyy = (phi[i, j+1] - 2*phi[i, j] + phi[i, j-1])/(deltay**2)
-    Dxy = (phi[i+1, j+1] - phi[i+1, j-1] - phi[i-1, j+1] + phi[i-1, j-1])/(4*deltax*deltay)
+def calc_k_on_domain(phi, deltax, deltay, clamp_g=False, use_eps=True):
+
+    # Calculate the shifted arrays for the derivatives. Will also work with
+    # ghosts
+    
+    phi_i_j = phi[1:-1, 1:-1]
+    phi_pi_pj = phi[2:, 2:]
+    phi_pi_j = phi[2:, 1:-1]
+    phi_pi_mj = phi[2:, 0:-2]
+    phi_i_pj = phi[1:-1, 2:]
+    phi_i_mj = phi[1:-1, 0:-2]
+    phi_mi_pj = phi[0:-2, 2:]
+    phi_mi_j = phi[0:-2, 1:-1]
+    phi_mi_mj = phi[0:-2, 0:-2]
+
+    Dx = (phi_pi_j - phi_mi_j)/(2*deltax)
+    Dy = (phi_i_pj - phi_i_mj)/(2*deltay)
+    Dxx = (phi_pi_j - 2*phi_i_j + phi_mi_j)/(deltax**2)
+    Dyy = (phi_i_pj - 2*phi_i_j + phi_i_mj)/(deltay**2)
+    Dxy = (phi_pi_pj - phi_pi_mj - phi_mi_pj + phi_mi_mj)/(4*deltax*deltay)
     g = np.sqrt(Dx**2 + Dy**2)
     if clamp_g and g < 0.5:
         g = 1
-    kij = (Dx*Dx*Dyy + Dy*Dy*Dxx - 2*Dxy*Dx*Dy) / \
+    k = (Dx*Dx*Dyy + Dy*Dy*Dxx - 2*Dxy*Dx*Dy) / \
         (g**3 + use_eps*np.finfo(float).eps)
-    return kij
+    kappa = 1/max(deltax, deltay)
+    k[k>=kappa] = kappa
+    k[k<=-kappa] = kappa
+    return k
 
 
 def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=True, animate=None):
@@ -60,10 +77,10 @@ def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=True, animate=None):
 
     for n in range(Nt):
         phi_old = phi.copy()
-        for i in range(1, N-1):
-            for j in range(1, M-1):
-                k = calc_k_ij_domain(phi_old, i, j, dx, dy, clamp_g, use_eps)
-                phi[i,j] = phi_old[i,j] + dt * k
+        phi_temp = phi.copy()
+        phi_temp[1:-1, 1:-1] = dt * calc_k_on_domain(phi, dx, dy,
+                                                     clamp_g, use_eps)
+        phi = phi_old + phi_temp
         # fig.clear()
         if animate is not None:
             ax.imshow(phi)
@@ -109,4 +126,4 @@ def plot_results(Nt, T, clamp_g=False, use_eps=True):
 
 
 if __name__ == "__main__":
-    plot_results(10, 1)
+    plot_results(300, 10)
