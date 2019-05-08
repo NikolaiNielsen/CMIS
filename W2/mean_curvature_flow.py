@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy import ndimage
 import imageio
 from progress.bar import Bar
+import time
 
 bwdist = ndimage.morphology.distance_transform_edt
 
@@ -65,18 +66,13 @@ def calc_k_on_domain(phi, deltax, deltay, use_eps=False):
     return k
 
 
-def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=False, animate=None):
+def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=False):
     """
     Function to run the simulation
     """
     N, M = phi.shape
     dx, dy = 1, 1
     dt = T/Nt
-
-    if animate is not None:
-        fig, ax = animate
-        ax.imshow(phi)
-        fig.show()
     bar = Bar('Simulating', max=Nt)
     for n in range(Nt):
         phi_old = phi.copy()
@@ -84,14 +80,20 @@ def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=False, animate=None):
         phi_temp[1:-1, 1:-1] = dt * calc_k_on_domain(phi, dx, dy,
                                                      use_eps)
         phi = phi_old + phi_temp
-        # fig.clear()
-        if animate is not None:
-            ax.imshow(phi)
-            plt.draw()
         bar.next()
     bar.finish()
-
     return phi
+
+
+def calc_area_contour(contourplot, level_n=0):
+    contours = contourplot.collections[level_n].get_paths()
+    area = 0
+    for cont in contours:
+        vertices = cont.vertices
+        x, y = vertices.T
+        area += np.abs(0.5*np.sum(y[:-1]*np.diff(x) - x[:-1]*np.diff(y)))
+    
+    return area
 
 
 def SDF_to_BW(phi):
@@ -123,7 +125,7 @@ def plot_series(ncols=5, nrows=2, T=1):
 
 def plot_results(Nt, T, clamp_g=False, use_eps=True):
     phi = grey_to_sdf('example.bmp')
-    fig, (ax1, ax2) = plt.subplots(ncols=2)
+    fig, (ax1, ax2, ax3) = plt.subplots(ncols=3)
     ax1.imshow(phi, cmap='Greys_r')
     ax1.contour(phi, levels=0)
 
@@ -131,8 +133,12 @@ def plot_results(Nt, T, clamp_g=False, use_eps=True):
     ax2.imshow(phi_end, cmap='Greys_r')
     ax2.contour(phi_end, levels=0)
 
-    plt.show()
+    im = SDF_to_BW(phi_end)
+    ax3.imshow(im, cmap='Greys_r')
+
+
+    # plt.show()
 
 
 if __name__ == "__main__":
-    plot_results(4000, 1000)
+    plot_results(40000, 10000)
