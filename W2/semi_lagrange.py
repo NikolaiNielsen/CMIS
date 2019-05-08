@@ -123,11 +123,12 @@ if __name__ == "__main__":
     Nx = np.arange(10, 210, 10)
     Nt = np.arange(10, 200, 10)
     Nxs, Nts = np.meshgrid(Nx, Nt)
-    error_matrix = np.load('large_error.npy')
+    # error_matrix = np.load('large_error.npy')
     # Nxs, Nts, error_matrix = calc_error(Nx, Nt)
+    xx, yy, phi, phi_start, max_phi_points = run_sim(method='nearest')
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    ax.plot_surface(Nxs, Nts, error_matrix)
+    ax.plot_surface(xx, yy, phi)
     uf.pretty_plotting(fig, ax,
                        title=r"RMS of difference between start and end $\phi$",
                        xlabel='Number of points per axis',
