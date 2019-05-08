@@ -31,11 +31,10 @@ def grey_to_sdf(name):
     return phi
 
 
-def calc_k_on_domain(phi, deltax, deltay, clamp_g=False, use_eps=True):
+def calc_k_on_domain(phi, deltax, deltay, use_eps=False):
 
     # Calculate the shifted arrays for the derivatives. Will also work with
     # ghosts
-    
     phi_i_j = phi[1:-1, 1:-1]
     phi_pi_pj = phi[2:, 2:]
     phi_pi_j = phi[2:, 1:-1]
@@ -46,23 +45,28 @@ def calc_k_on_domain(phi, deltax, deltay, clamp_g=False, use_eps=True):
     phi_mi_j = phi[0:-2, 1:-1]
     phi_mi_mj = phi[0:-2, 0:-2]
 
+    # calculate derivatives
     Dx = (phi_pi_j - phi_mi_j)/(2*deltax)
     Dy = (phi_i_pj - phi_i_mj)/(2*deltay)
     Dxx = (phi_pi_j - 2*phi_i_j + phi_mi_j)/(deltax**2)
     Dyy = (phi_i_pj - 2*phi_i_j + phi_i_mj)/(deltay**2)
     Dxy = (phi_pi_pj - phi_pi_mj - phi_mi_pj + phi_mi_mj)/(4*deltax*deltay)
     g = np.sqrt(Dx**2 + Dy**2)
-    if clamp_g and g < 0.5:
+
+    # Clamp g or add eps to k?
+    if not use_eps and g < 0.5:
         g = 1
     k = (Dx*Dx*Dyy + Dy*Dy*Dxx - 2*Dxy*Dx*Dy) / \
         (g**3 + use_eps*np.finfo(float).eps)
+
+    # Code for clamping k: k = max(-kappa, min(k, kappa))
     kappa = 1/max(deltax, deltay)
     k[k>=kappa] = kappa
     k[k<=-kappa] = kappa
     return k
 
 
-def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=True, animate=None):
+def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=False, animate=None):
     """
     Function to run the simulation
     """
@@ -79,7 +83,7 @@ def run_sim(phi, Nt, T=1, clamp_g=False, use_eps=True, animate=None):
         phi_old = phi.copy()
         phi_temp = np.zeros_like(phi_old)
         phi_temp[1:-1, 1:-1] = dt * calc_k_on_domain(phi, dx, dy,
-                                                     clamp_g, use_eps)
+                                                     use_eps)
         phi = phi_old + phi_temp
         # fig.clear()
         if animate is not None:
@@ -126,4 +130,4 @@ def plot_results(Nt, T, clamp_g=False, use_eps=True):
 
 
 if __name__ == "__main__":
-    plot_results(300, 10)
+    plot_results(1000, 20)
