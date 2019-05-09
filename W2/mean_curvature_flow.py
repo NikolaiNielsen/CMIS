@@ -169,4 +169,4 @@ def plot_results(dt, T, clamp_g=False, use_eps=True):
 
 
 if __name__ == "__main__":
-    plot_results(0.25, 100)
+    plot_results(0.25, 20000)

@@ -1,0 +1,66 @@
+\documentclass[sigconf]{acmart}
+% defining the \BibTeX command - from Oren Patashnik's original BibTeX documentation.
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08emT\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+% Remove the annoying stuff
+\settopmatter{printacmref=false} % Removes citation information below abstract
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+\pagestyle{plain} % removes running headers
+
+\usepackage{Nikolai}
+
+\usepackage{lipsum}
+
+
+
+
+
+\begin{document}
+
+%
+% The "title" command has an optional parameter, allowing the author to define a "short title" to be used in page headers.
+\title{CMIS Hand-in 2: Finite Difference Methods 2}
+
+\author{Nikolai Plambech Nielsen}
+\email{lpk331@alumni.ku.dk}
+\affiliation{%
+  \institution{Niels Bohr Institute, University of Copenhagen}
+}
+
+
+\maketitle
+
+\section{Introduction}
+
+
+\section{Semi-Lagrangian implicit time integration: solving the advection equation}
+In this problem we encounter the advection equation:
+\begin{equation}\label{key}
+	\frac{D \phi}{D t} = (\V{u} \D \grad) \phi + \diff{\phi}{t}
+\end{equation}
+Where $ D\phi/Dt $ is the particle derivative of the scalar field $ \phi $, and $ \V{u} $ is the associated velocity field. We set $ D\phi/Dt = 0 $ such that no dissipation occurs for the system:
+\begin{equation}\label{key}
+	 \diff{\phi}{t} = -(\V{u} \D \grad) \phi
+\end{equation} 
+The advection equation describes the flow of some scalar field $ \phi $ in a velocity field $ \V{u} $. This could for example describe the motion of food colouring in a pool of water. Then $ \phi $ would be the density of the food colouring molecules, whilst $ \V{u} $ would be the flow of the water in the pool.
+
+The idea behind semi-lagrangian time integration is to use this property of the advection equation, and directly use the values of the scalar field at the previous times step. Specifically we treat our grid points as particles floating along the vector field. At a previous time, the grid point particles (to first order) were at
+\begin{equation}\label{key}
+	\V{x}^{t - \Delta t} = \V{x}^t - \Delta t \V{u}
+\end{equation}
+we then use the the value of the field at these points as the value for $ phi $ on the grid points, for the next time step:
+\begin{equation}\label{key}
+	\phi(\V{x}^{t}) \leftarrow \phi(\V{x}^t - \Delta t \V{u}) 
+\end{equation}
+The problem then, is that we are not guaranteed, that the grid point particles hit a grid point position, and as such we might not know the value of $ \phi(\V{x}^t - \Delta t \V{u}) $. To get around this we use a bilinear interpolation between the four nearest grid points to $ \V{x}^{t - \Delta t} $, and use this interpolated value as the true value.
+
+
+\subsection{Experiments}
+
+
+
+
+\section{Explicit time integration with Finite Difference Methods}
+\subsection{Experiments}
+
+
+\end{document}
