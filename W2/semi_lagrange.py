@@ -120,17 +120,15 @@ def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
 
 
 def calc_int(x1, x2, dx):
-    err = np.sum((x1-x2)**2) * dx * dx
+    err = np.sum(x1**2) * dx * dx - np.sum(x2**2) * dx * dx
     return err
 
 
-
-
 def run_integral_experiment():
-    # Nx = np.arange(10, 210, 10)
-    # Nt = np.arange(10, 200, 10)
-    Nx = np.arange(10, 50, 10)
-    Nt = np.arange(10, 50, 10)
+    Nx = np.arange(2, 110, 98)
+    Nt = np.arange(10, 150, 10)
+    # Nx = np.arange(10, 50, 10)
+    # Nt = np.arange(10, 50, 10)
     Nxs, Nts, error_matrix = calc_error(Nx, Nt, measure=calc_int,
                                         filename='int_back')
 
