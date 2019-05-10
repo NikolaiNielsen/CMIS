@@ -96,12 +96,25 @@ To number of iterations per rotation needed to achieve an accuracy of $ 0.1 $ in
 
 Since we have no source term in our equation, and we set $ D\phi/Dt = 0$ the integral of $ \phi $ cannot increase. If our simulation is faithful, then we would expect the integral of $ \phi $ stay constant in time. A way to measure the faithfulness of the simulation would then be to calculate
 \begin{equation}\label{key}
-	\Delta\phi = \iint \phi_{\text{end}}^2 - \phi_{\text{start}} dx\ dy \approx \sum\sum \phi_{\text{end}}^2 - \phi_{\text{start}} \Delta x \Delta y
+	\Delta\phi^2 = \iint \phi_{\text{end}}^2 - \phi_{\text{start}}^2 dx\ dy \approx \sum\sum \phi_{\text{end}}^2 - \phi_{\text{start}}^2 \Delta x \Delta y
 \end{equation}
 for a range of grid spacings and time step sizes. One could also calculate the squared difference integral, but since we already know that the system never completes a full rotation (except in the limit $ \Delta t \to 0 $), the actual error calculated would not be attributable to the interpolation only, but a mix of the approximate full rotation and the interpolation. By calculating integral of the difference of the squares instead, we eliminate the dependency on the only approximate rotation.
 
-With this measure of error we also expect $ \lim\limits_{\Delta x, \Delta t \to 0} \Delta \phi = 0 $. The results are seen in figure \textbf{INSERT REF}.
+With this measure of error we also expect $ \lim\limits_{\Delta x, \Delta t \to 0} \Delta \phi^2 = 0 $. The results are seen in figure \ref{fig:semi_lagrange_error}.
+\begin{figure}
+	\includegraphics[width=\linewidth]{semi_lagrange_ex1.pdf}
+	\caption{$ \Delta \phi^2 $ for a range of different number of iterations and number of grid points. Note $ \Delta t \propto N_t, \Delta_x \propto N_x $.}
+	\label{fig:semi_lagrange_error}
+\end{figure}
+Notice the sign on the $ z $-axis. The difference does decrease as $ \Delta t $ and $ \Delta x $ are decreased, but seems to taper off towards some value. There is of course the sharp decrease in error when $ N_x = 10 $, but this is a pathological case, because $ \Delta x = 2$, and I am calculating the error for a Gaussian profile with $ \sigma_x=\sigma_y = 1 $. There simply is not enough points to sample the function accurately.
 
+Lastly we view the evolution of the system with time, seen in figure \ref{fig:semi_traj}. And indeed, the scalar field rotates.
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{semi_lagrange_traj.png}
+	\caption{Evolution of a Gaussian profile for $ \V{u}=(y, -x)^T $, with $ \Delta t = \pi/50 $. Shown after $ n $ iterations, with $ n\in \{0, 20, 40, 60, 80, 100\} $.}
+	\label{fig:semi_traj}
+\end{figure}
 
 \section{Mean curvature flow with finite difference methods}
 Next we turn our attention to solving the mean curvature flow equation for some signed distance field. Mean curvature flow is analogous to wrapping a tight string around an isosurface of a scalar field and then tightening the string such that it follows the isosurface at a higher value. The equation is given by
@@ -115,7 +128,7 @@ The right hand side of the equation can be rewritten as
 with $ H $ being the Hessian matrix.
 
 \subsection{Signed Distance Fields}
-A signed distance field is a scalar field describing the signed euclidian distance from each pixel of a black and white, binary image, to the nearest border between black and white, in units of pixels. The sign is such that white pixels are counted as inside, with a negative distance to the border. A one dimensional is seen in figure \textbf{INSERT REFERENCE}, where the inside is defined to be $ x \in [5, 11] $. For points sufficiently close to a border will have a gradient of approximately 1.
+A signed distance field is a scalar field describing the signed euclidian distance from each pixel of a black and white, binary image, to the nearest border between black and white, in units of pixels. The sign is such that white pixels are counted as inside, with a negative distance to the border. A one dimensional is seen in figure \ref{fig:signed_dist}, where the inside is defined to be $ x \in [5, 11] $. For points sufficiently close to a border will have a gradient of approximately 1.
 \begin{figure}
 	\includegraphics[width=\linewidth]{signed_distance_1d}
 	\caption{A signed distance field in one dimension, with the inside as $ x \in [5, 11] $.}
@@ -173,9 +186,30 @@ This mapping erases all information from $ \phi $, other than which parts of the
 \begin{equation}\label{key}
 	\text{Res} = \sum_{j=0}^N \sum_{i=1}^{N} (\phi_{\text{end}} - \phi_{\text{reconstructed}})^2 / N^2
 \end{equation} 
-This measurement should yield 0 if the simulation is a faithful representation of the mean curvature flow equation. This is tested on the sample image supplied by Kenny, resembling a flipped U, for a range of time step sizes (while keeping the ``absolute time'' unchanged, such that the end images should be equal across simulations). We of course expect the residual to trend towards zero as the time step is decreased. The results are shown in figure \textbf{REF}.
+This measurement should yield 0 if the simulation is a faithful representation of the mean curvature flow equation. This is tested on the sample image supplied by Kenny, resembling a flipped U, for a range of time step sizes (while keeping the ``absolute time'' unchanged, such that the end images should be equal across simulations). We of course expect the residual to trend towards zero as the time step is decreased. The results are shown in figure \ref{fig:residual}.
 
-As seen in the figure, the residual actually increases as $ \Delta t $ is decreased, contrary to the expectation. This could however be a result of the number of iterations performed. For $ \Delta t = 0.45 $ a total of 1112 iterations were completed, while for $ \Delta t = 0.05 $ 10000 iterations were completed. Since more iterations equals more calculations, each of which includes truncation errors, it is natural to expect a higher residual as more iterations are performed. If we then also scale the residual by the number of iterations we get the error dependence on $ \Delta t $, per iteration. This is seen in figure \textbf{INSERT REF}
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{mean_curvature_flow_ex1.png}
+	\caption{RMS between $  \phi_{\text{end}} $ and $ \phi_{\text{reconstructed}} $ as a function of $ \Delta t $, with $ T=500 $.}
+	\label{fig:residual}
+\end{figure}
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{mean_curvature_flow_ex2.pdf}
+	\caption{RMS between $  \phi_{\text{end}} $ and $ \phi_{\text{reconstructed}} $ as a function of $ \Delta t $. Scaled by the number of iterations: $ N_t = T/\Delta t $, for $ T=500 $.}
+	\label{fig:scaled_residual}
+\end{figure}
+As seen in the figure, the residual actually increases as $ \Delta t $ is decreased, contrary to the expectation. This could however be a result of the number of iterations performed. For $ \Delta t = 0.45 $ a total of 1112 iterations were completed, while for $ \Delta t = 0.05 $ 10000 iterations were completed. Since more iterations equals more calculations, each of which includes truncation errors, it is natural to expect a higher residual as more iterations are performed. If we then also scale the residual by the number of iterations we get the error dependence on $ \Delta t $, per iteration. This is seen in figure \ref{fig:scaled_residual}.
 
-In figure \textbf{REF}, the signed distance field can be seen at a variety of times, with $ \Delta t=0.25 $, showing the time evolution of $ \phi $.
+The error still increases as $ \Delta t $ decreases, until some critical value of $ \Delta t \approx 0.1$ is reached. I would have liked to investigate this further, if time permitted.
+
+
+
+Lastly, in figure \ref{fig:mcf_evol}, the signed distance field can be seen at a variety of times, with $ \Delta t=0.25 $, showing the time evolution of $ \phi $. As expected we see the contour of $ \phi=0 $ rounding at the corners and shrinking.
+\begin{figure*}
+	\includegraphics[width=\linewidth]{mean_curvature_evol.pdf}
+	\caption{Evolution of the signed distance field generated from the sample image. $ \Delta t = 0.25 $.}
+	\label{fig:mcf_evol}
+\end{figure*}
 \end{document}
