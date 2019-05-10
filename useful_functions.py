@@ -50,7 +50,7 @@ def pretty_plotting(fig, ax,
         fig.savefig(filename)
 
 
-def calc_residual(x1, x2):
+def calc_residual(x1, x2, *args):
     """
     Calculates the residual between two arrays x1 and x2, as an RMS of their
     differences.

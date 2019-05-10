@@ -91,11 +91,12 @@ def run_sim(Nx=50, Ny=50, Nt=6, xlim=[-10, 10], ylim=[-10, 10],
 
 
 def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
-               f_u=f_u, method='linear', fill=0):
+               f_u=f_u, method='linear', fill=0, measure=uf.calc_residual,
+               filename='backup'):
     """
     Function to run the simulation several time and plot results.
     """
-    save_file = "backup"
+    save_file = filename
     Nxs2, Nts2 = np.meshgrid(Nxs, Nts)
     error_matrix = np.zeros(Nxs2.shape)
 
@@ -107,7 +108,9 @@ def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
             _, _, phi, phi_start, _ = run_sim(Nx, Nx, Nt, xlim, ylim, f_u, 
                                               method, fill)
             
-            residual = uf.calc_residual(phi, phi_start)
+
+            dx = (xlim[1] - xlim[0])/Nx
+            residual = measure(phi, phi_start, dx)
             error_matrix[i, j] = residual
             np.save(save_file, error_matrix)
             print(f'Done: i: {i}/{Nts.size-1}, j: {j}/{Nxs.size-1}')
@@ -116,28 +119,11 @@ def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
     return Nxs2, Nts2, error_matrix
 
 
-def calc_int_array(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
-             f_u=f_u, method='linear', fill=0):
-    save_file = 'int_back'
-    Nxs2, Nts2 = np.meshgrid(Nxs, Nts)
-    error_matrix = np.zeros(Nxs2.shape)
-    
-    for i in range(Nxs2.shape[0]):
-        for j in range(Nxs2.shape[1]):
-            Nx = Nxs2[i, j]
-            Nt = Nts2[i, j]
+def calc_int(x1, x2, dx):
+    err = np.sum((x1-x2)**2) * dx * dx
+    return err
 
-            _, _, phi, phi_start, _ = run_sim(Nx, Nx, Nt, xlim, ylim, f_u,
-                                              method, fill)
 
-            dx = (xlim[1] - xlim[0])/(Nx-1)
-            int_start = np.sum(phi_start) * dx*dx
-            int_end = np.sum(phi) * dx*dx
-            error_matrix[i, j] = int_end/int_start
-            np.save(save_file, error_matrix)
-            print(f'Done: i: {i}/{Nts.size-1}, j: {j}/{Nxs.size-1}')
-
-    return Nxs2, Nts2, error_matrix
 
 
 def run_integral_experiment():
@@ -145,7 +131,8 @@ def run_integral_experiment():
     # Nt = np.arange(10, 200, 10)
     Nx = np.arange(10, 50, 10)
     Nt = np.arange(10, 50, 10)
-    Nxs, Nts, error_matrix = calc_int_array(Nx, Nt)
+    Nxs, Nts, error_matrix = calc_error(Nx, Nt, measure=calc_int,
+                                        filename='int_back')
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
