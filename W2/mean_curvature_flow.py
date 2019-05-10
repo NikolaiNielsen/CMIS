@@ -96,7 +96,7 @@ def calc_k_on_domain(phi, deltax, deltay, use_eps=False):
     return k
 
 
-def run_sim(phi, dt=1/3, T=1, clamp_g=False, use_eps=False):
+def run_sim(phi, dt=1/3, T=1, use_eps=False):
     """
     Function to run the simulation
     """
@@ -152,7 +152,7 @@ def plot_series(ncols=5, nrows=2, T=1):
     plt.show()
 
 
-def plot_results(dt, T, clamp_g=False, use_eps=True):
+def plot_results(dt, T, use_eps=True):
     phi = grey_to_sdf('example.bmp')
     phi_plot = phi[1:-1, 1:-1]
     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3)
@@ -168,5 +168,23 @@ def plot_results(dt, T, clamp_g=False, use_eps=True):
     ax3.imshow(im, cmap='Greys_r')
 
 
+def calc_error_matrix():
+    phi = grey_to_sdf('example.bmp')
+    dts = np.linspace(0.01, 0.49, 4)
+    T = 500
+    
+    errors = np.zeros(dts.shape)
+    for i, dt in enumerate(dts):
+        phi_end = run_sim(phi, dt, T, use_eps=True)
+        im = SDF_to_BW(phi_end)
+        phi_reconstructed = bw2phi(im)
+        errors[i] = uf.calc_residual(phi_end, phi_reconstructed)
+        print(f'Done. {i+1}/{dts.size}')
+    
+    fig, ax = plt.subplots()
+    ax.plot(dts, errors)
+    plt.show()
+
+
 if __name__ == "__main__":
-    plot_results(0.25, 10000)
+    calc_error_matrix()
