@@ -28,8 +28,8 @@ def grey_to_sdf(name, ghosts=True):
     """
     im = imageio.imread(name, as_gray=True)
     im = im.astype(np.int)
+    im = add_ghost_nodes(im)
     phi = bw2phi(im)
-    phi = add_ghost_nodes(phi)
     return phi
 
 
@@ -51,14 +51,15 @@ def update_boundary_conditions(phi):
     """
     left = phi[0:3, 1:-1]
     right = phi[-3:, 1:-1]
-    top = phi[1:-1, 0:3]
-    bottom = phi[1:-1, -3:]
+    top = phi[:, 0:3]
+    bottom = phi[:, -3:]
 
     phi[0,1:-1] =   left[0]     + left[1]     - left[2]  
-    phi[1:-1,0] =   top[:,0]    + top[:,1]    - top[:,2]   
-    phi[1:-1,-1] =  bottom[:,0] + bottom[:,1] - bottom[:,2]
+    phi[:,0] =   top[:,0]    + top[:,1]    - top[:,2]   
+    phi[:,-1] =  bottom[:,0] + bottom[:,1] - bottom[:,2]
     phi[-1,1:-1] =  right[0]    + right[1]    - right[2] 
-    phi[[0,0, -1,-1],[0,-1,0,-1]] = 0
+    # phi[[0,0, -1,-1],[0,-1,0,-1]] = 0
+
     return phi
 
 def calc_k_on_domain(phi, deltax, deltay, use_eps=False):
@@ -105,7 +106,7 @@ def run_sim(phi, dt=1/3, T=1, clamp_g=False, use_eps=False):
     for n in range(Nt):
         phi_old = phi.copy()
         phi_temp = np.zeros_like(phi_old)
-        phi_temp = update_boundary_conditions(phi_temp)
+        phi = update_boundary_conditions(phi)
         phi_temp[1:-1, 1:-1] = dt * calc_k_on_domain(phi, dx, dy,
                                                      use_eps)
         phi = phi_old + phi_temp
@@ -169,4 +170,4 @@ def plot_results(dt, T, clamp_g=False, use_eps=True):
 
 
 if __name__ == "__main__":
-    plot_results(0.25, 20000)
+    plot_results(0.25, 1000)
