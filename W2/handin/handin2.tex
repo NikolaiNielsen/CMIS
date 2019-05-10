@@ -59,7 +59,27 @@ With this vector field, we expect the scalar field to rotate in time, with a per
 
 
 \subsection{Experiments}
+For this problem I perform two experiments. In the first I want to test how the rotation depends on the time step, and in the second I test how much bleeding occurs, again as a function of the time step and grid spacing.
 
+To test the rotation, I take a point, say $ \V{x} = (2,0)^T $ and backtrace $ N $ times to get $ \V{x}' $, corresponding to one rotation of the whole grid, and compare the magnitude and argument of $ \V{x}' $ to that of $ \V{x} $. An example of the trajectory is seen in figure \textbf{INSERT REF}, with $ \Delta t = \pi/25\approx 0.126 $. In figure \textbf{INSERT REF} the ratio of magnitudes $ ||\V{x}'|| / ||\V{x}|| $ and the argument of $ x' $ ($ \text{atan2}(x'_1, x'_2) $) is calculated for a range of simulations. As seen in the figure, the values tend to 1 and 0 respectively, corresponding to:
+\begin{equation}\label{key}
+	\lim\limits_{\Delta t \to 0} \V{x}' = \V{x}.
+\end{equation}
+To number of iterations per rotation needed to achieve an accuracy of $ 0.1 $ in the argument and ratios of magnitude are tabulated in table \ref{tab:arg_mag}.
+
+\begin{table}
+	\centering
+	\begin{tabular}{ccc}
+		\hline
+		$ N $ & $ \text{atan2}(x'_1, x'_2) $ & $ ||\V{x}'|| / ||\V{x}|| $ \\
+		\hline
+		74 & -0.997 & 1.300 \\
+		207 & -0.0323 & 1.090 \\
+		\hline
+	\end{tabular}
+	\caption{Number of iterations per revolution needed to achieve an accuracy greater than $ 0.1 $ in both argument and ratios of magnitudes in the Semi-lagrangian time integration.}
+	\label{tab:arg_mag}
+\end{table} 
 
 
 
