@@ -51,12 +51,12 @@ def update_boundary_conditions(phi):
     """
     left = phi[0:3, 1:-1]
     right = phi[-3:, 1:-1]
-    top = phi[:, 0:3]
-    bottom = phi[:, -3:]
+    top = phi[1:-1, 0:3]
+    bottom = phi[1:-1, -3:]
 
     phi[0,1:-1] =   left[0]     + left[1]     - left[2]  
-    phi[:,0] =   top[:,0]    + top[:,1]    - top[:,2]   
-    phi[:,-1] =  bottom[:,0] + bottom[:,1] - bottom[:,2]
+    phi[1:-1,0] =   top[:,0]    + top[:,1]    - top[:,2]   
+    phi[1:-1,-1] =  bottom[:,0] + bottom[:,1] - bottom[:,2]
     phi[-1,1:-1] =  right[0]    + right[1]    - right[2] 
     # phi[[0,0, -1,-1],[0,-1,0,-1]] = 0
 
@@ -103,6 +103,8 @@ def run_sim(phi, dt=1/3, T=1, clamp_g=False, use_eps=False):
     dx, dy = 1, 1
     Nt = np.ceil(T/dt).astype(int)
     bar = Bar('Simulating', max=Nt)
+    corner = np.zeros((Nt+1,4))
+    corner[0] = phi[[1, 1, -2, -2], [1, -2, 1, -2]]
     for n in range(Nt):
         phi_old = phi.copy()
         phi_temp = np.zeros_like(phi_old)
@@ -110,9 +112,10 @@ def run_sim(phi, dt=1/3, T=1, clamp_g=False, use_eps=False):
         phi_temp[1:-1, 1:-1] = dt * calc_k_on_domain(phi, dx, dy,
                                                      use_eps)
         phi = phi_old + phi_temp
+        corner[n+1] = phi[[1, 1, -2, -2], [1, -2, 1, -2]]
         bar.next()
     bar.finish()
-    return phi
+    return phi, corner
 
 
 def calc_area_contour(contourplot, level_n=0):
@@ -159,15 +162,18 @@ def plot_results(dt, T, clamp_g=False, use_eps=True):
     ax1.imshow(phi_plot, cmap='Greys_r')
     ax1.contour(phi_plot, levels=0)
 
-    phi_end = run_sim(phi, dt, T, clamp_g, use_eps)
+    phi_end, corners = run_sim(phi, dt, T, clamp_g, use_eps)
     phi_end_plot = phi_end[1:-1, 1:-1]
     ax2.imshow(phi_end_plot, cmap='Greys_r')
     ax2.contour(phi_end_plot, levels=0)
 
     im = SDF_to_BW(phi_end)
     ax3.imshow(im, cmap='Greys_r')
-    plt.show()
+    
+    fig2, ax = plt.subplots()
+    ax.plot(corners)
 
+    plt.show()
 
 if __name__ == "__main__":
     plot_results(0.25, 1000)
