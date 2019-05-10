@@ -159,7 +159,7 @@ def plot_results(dt, T, use_eps=True):
     ax1.imshow(phi_plot, cmap='Greys_r')
     ax1.contour(phi_plot, levels=0)
 
-    phi_end = run_sim(phi, dt, T, clamp_g, use_eps)
+    phi_end = run_sim(phi, dt, T, use_eps)
     phi_end_plot = phi_end[1:-1, 1:-1]
     ax2.imshow(phi_end_plot, cmap='Greys_r')
     ax2.contour(phi_end_plot, levels=0)
@@ -172,10 +172,11 @@ def calc_error_matrix(scale=True):
     phi = grey_to_sdf('example.bmp')
     dts = np.arange(0.05, 0.49, 0.05)
     T = 500
-    
+    save_name = 'MCF_error'
     errors = np.zeros(dts.shape)
     for i, dt in enumerate(dts):
         phi_end = run_sim(phi, dt, T, use_eps=True)
+        phi_end = phi_end[1:-1, 1:-1]
         im = SDF_to_BW(phi_end)
         phi_reconstructed = bw2phi(im)
         if scale:
@@ -183,12 +184,41 @@ def calc_error_matrix(scale=True):
         else:
             N = 1
         errors[i] = uf.calc_residual(phi_end, phi_reconstructed) / N
+        np.save(save_name, errors)
         print(f'Done. {i+1}/{dts.size}')
     
     fig, ax = plt.subplots()
     ax.plot(dts, errors)
+    uf.pretty_plotting(
+        fig, ax,
+        xlabel=r'Time step sixe $\Delta t$',
+        ylabel=r'RMS/$N_t$',
+        title=r'Scaled RMS between $\phi_{end}$ and $\phi_{reconstructed}$')
     fig.savefig('mean_curvature_flow_ex2.pdf')
 
 
+def plot_pretty_results():
+    dt = 0.25
+    Ts = [i*100 for i in range(1,9)]
+    T = 100
+    phi = grey_to_sdf('example.bmp')
+    phi_plot = phi[1:-1, 1:-1]
+    fig, axes = plt.subplots(nrows=3, ncols=3)
+    axes = axes.flatten()
+    axes[0].imshow(phi_plot, cmap='Greys_r')
+    axes[0].contour(phi_plot, levels=0)
+    axes[0].title.set_text('T=0')
+    for i in range(len(Ts)):
+        phi = run_sim(phi, dt, T, True)
+        phi_plot = phi[1:-1, 1:-1]
+        axes[i+1].imshow(phi_plot, cmap='Greys_r')
+        axes[i+1].contour(phi_plot, levels=0)
+        axes[i+1].title.set_text(f'T={Ts[i]}')
+    
+    fig.tight_layout()
+    plt.show()
+
+
+
 if __name__ == "__main__":
-    calc_error_matrix()
+    plot_pretty_results()

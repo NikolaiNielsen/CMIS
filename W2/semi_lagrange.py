@@ -125,8 +125,8 @@ def calc_int(x1, x2, dx):
 
 
 def run_integral_experiment():
-    Nx = np.arange(2, 110, 98)
-    Nt = np.arange(10, 150, 10)
+    Nx = np.arange(10, 110, 10)
+    Nt = np.arange(10, 100, 10)
     # Nx = np.arange(10, 50, 10)
     # Nt = np.arange(10, 50, 10)
     Nxs, Nts, error_matrix = calc_error(Nx, Nt, measure=calc_int,
@@ -142,7 +142,33 @@ def run_integral_experiment():
     plt.show()
 
 
+def plot_results():
+    Nt = 100
+    Nx = 200
+    dt = 2*np.pi / Nt
+    xx, yy, phi = create_phi(Nx, Nx)
+    fig, axes = plt.subplots(nrows=2, ncols=3)
+    axes = axes.flatten()
+    saves = [19, 39, 59, 79, 99]
+    save_num = 1
+    phi_save = np.zeros((Nx, Nx, 6))
+    phi_save[:,:,0] = phi
+    for i in range(Nx):
+        phi = sim_next_step(xx, yy, phi, dt, yy, -xx)
+        if i in saves:
+            phi_save[:,:,save_num] = phi
+            save_num += 1
+    Ts = ['T=0', 'T=$2\pi/5$', 'T=$4\pi/5$', 'T=$6\pi/5$',
+          'T=$8\pi/5$', 'T=$2\pi$']
+    for i in range(6):
+        axes[i].imshow(phi_save[:,:,i])
+        axes[i].title.set_text(f'T={Ts[i]}')
+    fig.tight_layout()
+    plt.show()
+
+        
+
 if __name__ == "__main__":
 
-    run_integral_experiment()
+    plot_results()
 
