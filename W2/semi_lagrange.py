@@ -21,7 +21,7 @@ def create_phi(Nx=50, Ny=50, xlim=[-10, 10], ylim=[-10, 10]):
     sigma_xs = [1] #, 1, 2, 0.8]
     sigma_ys = [1] #, 1, 0.5, 1]
     As = [1] #, 0.7, -0.5, 1]
-    mu_xs = [3] #, 3, 0, -3]
+    mu_xs = [2] #, 3, 0, -3]
     mu_ys = [0] #, 0, -3, 0]
 
     # Create the field through addition
@@ -115,23 +115,49 @@ def calc_error(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
 
     return Nxs2, Nts2, error_matrix
 
+
+def calc_int_array(Nxs, Nts, xlim=[-10, 10], ylim=[-10, 10],
+             f_u=f_u, method='linear', fill=0):
+    save_file = 'int_back'
+    Nxs2, Nts2 = np.meshgrid(Nxs, Nts)
+    error_matrix = np.zeros(Nxs2.shape)
     
+    for i in range(Nxs2.shape[0]):
+        for j in range(Nxs2.shape[1]):
+            Nx = Nxs2[i, j]
+            Nt = Nts2[i, j]
+
+            _, _, phi, phi_start, _ = run_sim(Nx, Nx, Nt, xlim, ylim, f_u,
+                                              method, fill)
+
+            dx = (xlim[1] - xlim[0])/(Nx-1)
+            int_start = np.sum(phi_start) * dx*dx
+            int_end = np.sum(phi) * dx*dx
+            error_matrix[i, j] = int_end/int_start
+            np.save(save_file, error_matrix)
+            print(f'Done: i: {i}/{Nts.size-1}, j: {j}/{Nxs.size-1}')
+
+    return Nxs2, Nts2, error_matrix
+
+
+def run_integral_experiment():
+    # Nx = np.arange(10, 210, 10)
+    # Nt = np.arange(10, 200, 10)
+    Nx = np.arange(10, 50, 10)
+    Nt = np.arange(10, 50, 10)
+    Nxs, Nts, error_matrix = calc_int_array(Nx, Nt)
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.plot_surface(Nxs, Nts, error_matrix)
+    uf.pretty_plotting(fig, ax,
+                       title=r"Ratio of squared integrals: $\iint \phi_{end}^2 d\mathbf{x} / \iint \phi_{start}^2 d\mathbf{x}$",
+                       xlabel='Number of points per axis',
+                       ylabel='Number of steps per simulation')
+    plt.show()
 
 
 if __name__ == "__main__":
 
-    Nx = np.arange(10, 210, 10)
-    Nt = np.arange(10, 200, 10)
-    Nxs, Nts = np.meshgrid(Nx, Nt)
-    # error_matrix = np.load('large_error.npy')
-    # Nxs, Nts, error_matrix = calc_error(Nx, Nt)
-    xx, yy, phi, phi_start, max_phi_points = run_sim(method='nearest')
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    ax.plot_surface(xx, yy, phi)
-    uf.pretty_plotting(fig, ax,
-                       title=r"RMS of difference between start and end $\phi$",
-                       xlabel='Number of points per axis',
-                       ylabel='Number of steps per simulation')
-    plt.show()
+    run_integral_experiment()
 
