@@ -168,9 +168,9 @@ def plot_results(dt, T, use_eps=True):
     ax3.imshow(im, cmap='Greys_r')
 
 
-def calc_error_matrix():
+def calc_error_matrix(scale=True):
     phi = grey_to_sdf('example.bmp')
-    dts = np.linspace(0.01, 0.49, 4)
+    dts = np.arange(0.05, 0.49, 0.05)
     T = 500
     
     errors = np.zeros(dts.shape)
@@ -178,12 +178,16 @@ def calc_error_matrix():
         phi_end = run_sim(phi, dt, T, use_eps=True)
         im = SDF_to_BW(phi_end)
         phi_reconstructed = bw2phi(im)
-        errors[i] = uf.calc_residual(phi_end, phi_reconstructed)
+        if scale:
+            N = np.ceil(T/dt).astype(int)
+        else:
+            N = 1
+        errors[i] = uf.calc_residual(phi_end, phi_reconstructed) / N
         print(f'Done. {i+1}/{dts.size}')
     
     fig, ax = plt.subplots()
     ax.plot(dts, errors)
-    plt.show()
+    fig.savefig('mean_curvature_flow_ex2.pdf')
 
 
 if __name__ == "__main__":
