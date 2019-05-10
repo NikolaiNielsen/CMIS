@@ -59,9 +59,22 @@ With this vector field, we expect the scalar field to rotate in time, with a per
 
 
 \subsection{Experiments}
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{spiral.pdf}
+	\caption{Typical trajectory of a grid point after $ N $ iterations of semi-Lagrangian time integration (if the grid point was continually interpreted as a particle).}
+	\label{fig:spiral}
+\end{figure}
 For this problem I perform two experiments. In the first I want to test how the rotation depends on the time step, and in the second I test how much bleeding occurs, again as a function of the time step and grid spacing.
 
-To test the rotation, I take a point, say $ \V{x} = (2,0)^T $ and backtrace $ N $ times to get $ \V{x}' $, corresponding to one rotation of the whole grid, and compare the magnitude and argument of $ \V{x}' $ to that of $ \V{x} $. An example of the trajectory is seen in figure \textbf{INSERT REF}, with $ \Delta t = \pi/25\approx 0.126 $. In figure \textbf{INSERT REF} the ratio of magnitudes $ ||\V{x}'|| / ||\V{x}|| $ and the argument of $ x' $ ($ \text{atan2}(x'_1, x'_2) $) is calculated for a range of simulations. As seen in the figure, the values tend to 1 and 0 respectively, corresponding to:
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{rotation_dependence.pdf}
+	\caption{Argument and ratio of magnitudes calculated as a function of the time step size $  \Delta t $. As $ \Delta t $ decreases, the system approaches a full revolution, corresponding to an argument of 0 and a magnitude ratio of 1.}
+	\label{fig:rotation}
+\end{figure}
+
+To test the rotation, I take a point, say $ \V{x} = (2,0)^T $ and backtrace $ N $ times to get $ \V{x}' $, corresponding to one rotation of the whole grid, and compare the magnitude and argument of $ \V{x}' $ to that of $ \V{x} $. An example of the trajectory is seen in figure \ref{fig:spiral}, with $ \Delta t = \pi/25\approx 0.126 $. In figure \ref{fig:rotation} the ratio of magnitudes $ ||\V{x}'|| / ||\V{x}|| $ and the argument of $ x' $ ($ \text{atan2}(x'_1, x'_2) $) is calculated for a range of simulations. As seen in the figure, the values tend to 1 and 0 respectively, corresponding to:
 \begin{equation}\label{key}
 	\lim\limits_{\Delta t \to 0} \V{x}' = \V{x}.
 \end{equation}
@@ -88,9 +101,6 @@ Since we have no source term in our equation, and we set $ D\phi/Dt = 0$ the int
 for a range of grid spacings and time step sizes. One could also calculate the squared difference integral, but since we already know that the system never completes a full rotation (except in the limit $ \Delta t \to 0 $), the actual error calculated would not be attributable to the interpolation only, but a mix of the approximate full rotation and the interpolation. By calculating integral of the difference of the squares instead, we eliminate the dependency on the only approximate rotation.
 
 With this measure of error we also expect $ \lim\limits_{\Delta x, \Delta t \to 0} \Delta \phi = 0 $. The results are seen in figure \textbf{INSERT REF}.
-
-
-
 
 
 \section{Mean curvature flow with finite difference methods}
@@ -164,6 +174,8 @@ This mapping erases all information from $ \phi $, other than which parts of the
 	\text{Res} = \sum_{j=0}^N \sum_{i=1}^{N} (\phi_{\text{end}} - \phi_{\text{reconstructed}})^2 / N^2
 \end{equation} 
 This measurement should yield 0 if the simulation is a faithful representation of the mean curvature flow equation. This is tested on the sample image supplied by Kenny, resembling a flipped U, for a range of time step sizes (while keeping the ``absolute time'' unchanged, such that the end images should be equal across simulations). We of course expect the residual to trend towards zero as the time step is decreased. The results are shown in figure \textbf{REF}.
+
+As seen in the figure, the residual actually increases as $ \Delta t $ is decreased, contrary to the expectation. This could however be a result of the number of iterations performed. For $ \Delta t = 0.45 $ a total of 1112 iterations were completed, while for $ \Delta t = 0.05 $ 10000 iterations were completed. Since more iterations equals more calculations, each of which includes truncation errors, it is natural to expect a higher residual as more iterations are performed. If we then also scale the residual by the number of iterations we get the error dependence on $ \Delta t $, per iteration. This is seen in figure \textbf{INSERT REF}
 
 In figure \textbf{REF}, the signed distance field can be seen at a variety of times, with $ \Delta t=0.25 $, showing the time evolution of $ \phi $.
 \end{document}
