@@ -81,6 +81,16 @@ To number of iterations per rotation needed to achieve an accuracy of $ 0.1 $ in
 	\label{tab:arg_mag}
 \end{table} 
 
+Since we have no source term in our equation, and we set $ D\phi/Dt = 0$ the integral of $ \phi $ cannot increase. If our simulation is faithful, then we would expect the integral of $ \phi $ stay constant in time. A way to measure the faithfulness of the simulation would then be to calculate
+\begin{equation}\label{key}
+	\Delta\phi = \iint \phi_{\text{end}}^2 - \phi_{\text{start}} dx\ dy \approx \sum\sum \phi_{\text{end}}^2 - \phi_{\text{start}} \Delta x \Delta y
+\end{equation}
+for a range of grid spacings and time step sizes. One could also calculate the squared difference integral, but since we already know that the system never completes a full rotation (except in the limit $ \Delta t \to 0 $), the actual error calculated would not be attributable to the interpolation only, but a mix of the approximate full rotation and the interpolation. By calculating integral of the difference of the squares instead, we eliminate the dependency on the only approximate rotation.
+
+With this measure of error we also expect $ \lim\limits_{\Delta x, \Delta t \to 0} \Delta \phi = 0 $. The results are seen in figure \textbf{INSERT REF}.
+
+
+
 
 
 \section{Mean curvature flow with finite difference methods}
@@ -129,6 +139,7 @@ This numerical scheme is conditionally stable, since too large a time step will 
 \begin{equation}\label{key}
 	\Delta t \leq \frac{h}{2k_{\max}}, \quad h = \min(\Delta x, \Delta y)
 \end{equation}
+In our case, $ \Delta x = \Delta y = 1 $, and $ \Delta t \leq 1/2 $.
 
 \subsection{Boundary conditions}
 For a signed distance field, the boundary nodes will not have a fixed value, and as such a von Neumann boundary condition is preferable to a Dirichlet boundary condition. In general, the signed distance field will have a gradient of $ \pm 1 $ in each direction, so long as the node is sufficiently far away from the midpoint of a region. Since midpoints cannot occur at the boundary, it makes sense to extend the derivative to the boundary. For the left boundary this would mean $ d\phi_{1,j}/dx = d\phi{2_j}/dx$. This is implemented using ghost nodes and a central difference approximation:
@@ -141,6 +152,18 @@ Giving the updating formula for ghost nodes on the left boundary:
 \end{equation}
 
 \subsection{Experiments}
+The mean curvature flow equation should conserve the signed distance field properties. To test this I convert $ \phi $ back to a black and white image after the simulation using the mapping
+\begin{equation}\label{key}
+	\text{BW} = \begin{cases}
+	1 & \phi < 0 \\
+	0 & \phi \geq 0
+	\end{cases}
+\end{equation}
+This mapping erases all information from $ \phi $, other than which parts of the field were inside and outside. Then I use the \texttt{bw2phi} function supplied by Kenny to generate the signed distance field from this new black and white image, introducing information to the system again. To quantify the error I calculate the RMS of the residual between the two images over the domain:
+\begin{equation}\label{key}
+	\text{Res} = \sum_{j=0}^N \sum_{i=1}^{N} (\phi_{\text{end}} - \phi_{\text{reconstructed}})^2 / N^2
+\end{equation} 
+This measurement should yield 0 if the simulation is a faithful representation of the mean curvature flow equation. This is tested on the sample image supplied by Kenny, resembling a flipped U, for a range of time step sizes (while keeping the ``absolute time'' unchanged, such that the end images should be equal across simulations). We of course expect the residual to trend towards zero as the time step is decreased. The results are shown in figure \textbf{REF}.
 
-
+In figure \textbf{REF}, the signed distance field can be seen at a variety of times, with $ \Delta t=0.25 $, showing the time evolution of $ \phi $.
 \end{document}
