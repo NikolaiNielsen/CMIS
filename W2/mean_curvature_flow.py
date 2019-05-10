@@ -105,6 +105,12 @@ def run_sim(phi, dt=1/3, T=1, clamp_g=False, use_eps=False):
     bar = Bar('Simulating', max=Nt)
     corner = np.zeros((Nt+1,4))
     corner[0] = phi[[1, 1, -2, -2], [1, -2, 1, -2]]
+    g_corner = np.zeros((Nt+1, 4))
+    g_corner[0] = phi[[0, 0, -1, -1], [0, -1, 0, -1]]
+    g_bottom = np.zeros((Nt+1, phi.shape[0]))
+    g_bottom[0] = phi[:,-1]
+    g_right = np.zeros((Nt+1, phi.shape[0]))
+    g_right[0] = phi[-1, :]
     for n in range(Nt):
         phi_old = phi.copy()
         phi_temp = np.zeros_like(phi_old)
@@ -113,9 +119,12 @@ def run_sim(phi, dt=1/3, T=1, clamp_g=False, use_eps=False):
                                                      use_eps)
         phi = phi_old + phi_temp
         corner[n+1] = phi[[1, 1, -2, -2], [1, -2, 1, -2]]
+        g_corner[n+1] = phi[[0, 0, -1, -1], [0, -1, 0, -1]]
+        g_bottom[n+1] = phi[:, -1]
+        g_right[n+1] = phi[-1, :]
         bar.next()
     bar.finish()
-    return phi, corner
+    return phi, corner, g_bottom, g_right
 
 
 def calc_area_contour(contourplot, level_n=0):
@@ -162,7 +171,7 @@ def plot_results(dt, T, clamp_g=False, use_eps=True):
     ax1.imshow(phi_plot, cmap='Greys_r')
     ax1.contour(phi_plot, levels=0)
 
-    phi_end, corners = run_sim(phi, dt, T, clamp_g, use_eps)
+    phi_end, corners, g_bottom, g_right = run_sim(phi, dt, T, clamp_g, use_eps)
     phi_end_plot = phi_end[1:-1, 1:-1]
     ax2.imshow(phi_end_plot, cmap='Greys_r')
     ax2.contour(phi_end_plot, levels=0)
@@ -173,6 +182,13 @@ def plot_results(dt, T, clamp_g=False, use_eps=True):
     fig2, ax = plt.subplots()
     ax.plot(corners)
 
+    fig3, (ax_1, ax_2) = plt.subplots(ncols=2, subplot_kw=dict(projection='3d'))
+    N, M = g_bottom.shape
+    X = np.arange(N)
+    Y = np.arange(M)
+    X, Y = np.meshgrid(X,Y)
+    ax_1.plot_surface(X.T,Y.T, g_bottom)
+    ax_2.plot_surface(X.T,Y.T, g_right)
     plt.show()
 
 if __name__ == "__main__":
