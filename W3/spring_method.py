@@ -74,39 +74,15 @@ def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=3):
     return X, Y
 
 
-def gen_line_from_points(x, p1, p2, min_=True):
-    dx = p2[0] - p1[0]
-    dy = p2[1] - p1[1]
-    if dx == 0:
-        if min_:
-            return min(p1[1], p2[1])
-        else:
-            return max(p1[1], p2[1])
-    else:
-        return dy/dx*(x-p1[0]) + p1[1]
-
-
 def gen_points_in_triangle(v, N=10):
-    p1, p2, p3 = v[np.argsort(v[:, 1])]
-    
-    xmax = np.amax(v[:, 0])
-    xmin = np.amin(v[:, 0])
-
-    x = np.random.uniform(xmin, xmax, N)
-    print(x)
-
-    f1y_max = gen_line_from_points(x, p1, p2, min_=False)
-    f1y_min = gen_line_from_points(x, p1, p2)
-    f2y_max = gen_line_from_points(x, p1, p3, min_=False)
-    f2y_min = gen_line_from_points(x, p1, p3)
-    f3y_max = gen_line_from_points(x, p2, p3, min_=False)
-    f3y_min = gen_line_from_points(x, p2, p3)
-    f_min = np.minimum(f1y_min, f2y_min, f3y_min)
-    f_max = np.maximum(f1y_max, f2y_max, f3y_max)
-
-
-    y = np.random.uniform(f_min, f_max, N)
-    return x, y
+    r1 = np.sqrt(np.random.uniform(size=N))
+    r2 = np.random.uniform(size=N)
+    a = 1-r1
+    b = r1*(1-r2)
+    c = r1*r2
+    r = np.array((a,b,c))
+    points = v.T @ r
+    return points
 
 #%% project particles
 # Gx, Gy, sdf, X, Y, im = import_data()
@@ -126,13 +102,13 @@ def gen_points_in_triangle(v, N=10):
 
 
 #%%
-a = np.array(((1,2),(2,4),(1,3)))
-x, y = gen_points_in_triangle(a)
-
+a = np.array(((1,1),(2,4),(5,2)))
+points = gen_points_in_triangle(a, N=10)
+x, y = points
 fig, ax = plt.subplots()
-ax.plot(a[[0,1],0], a[[0,1],1], 'b')
-ax.plot(a[[0,2],0], a[[0,2],1], 'b')
-ax.plot(a[[1,2],0], a[[1,2],1], 'b')
-ax.scatter(a[:,0], a[:,1], s=36)
-ax.scatter(x,y, s=10)
+# ax.plot(a[[0,1],0], a[[0,1],1], 'b')
+# ax.plot(a[[0,2],0], a[[0,2],1], 'b')
+# ax.plot(a[[1,2],0], a[[1,2],1], 'b')
+# ax.scatter(a[:,0], a[:,1], s=36)
+ax.scatter(x,y, s=1)
 plt.show()
