@@ -23,11 +23,10 @@ def import_data(name='example.bmp', Nverts=500):
     return Gx, Gy, sdf, X, Y, im
 
 
-def push_with_splines(x, y, interpolators):
-    sdf_i, dx_i, dy_i = interpolators
-    d = sdf_i(x, y, grid=False)
-    nx = dx_i(x, y, grid=False)
-    ny = dy_i(x, y, grid=False)
+def push_with_splines(x, y, sdf_spline):
+    d =  sdf_spline.ev(y, x)
+    nx = sdf_spline.ev(y, x, dy=1)
+    ny = sdf_spline.ev(y, x, dx=1)
     nx = d*nx
     ny = d*ny
     mask = d > 0
@@ -41,21 +40,9 @@ def push_points_inside(interp_points, Gx, Gy, sdf):
     values = sdf.flatten()
 
     d = interpolate.griddata(points, values, interp_points)
-    d_nan = np.isnan(d)
-    d[d_nan] = interpolate.griddata(points, values, interp_points[d_nan, :],
-                                    method='nearest')
-
     dy, dx = np.gradient(sdf)
-
     nx = interpolate.griddata(points, dx.flatten(), interp_points)
-    nx_nan = np.isnan(nx)
-    nx[nx_nan] = interpolate.griddata(points, values, interp_points[nx_nan, :],
-                                    method='nearest')
-
     ny = interpolate.griddata(points, dy.flatten(), interp_points)
-    ny_nan = np.isnan(ny)
-    ny[ny_nan] = interpolate.griddata(points, values, interp_points[ny_nan, :],
-                                    method='nearest')
     nx = d*nx
     ny = d*ny
     mask = d > 0
@@ -153,48 +140,11 @@ def get_outside_triangles(verts, Gx, Gy, sdf, bar=True):
 Gx, Gy, sdf, X, Y, im = import_data()
 x = Gx[0,:]
 y = Gy[:,0]
-sdf_spline = interpolate.RectBivariateSpline(x, y, sdf, kx=1, ky=1)
-dy, dx = np.gradient(sdf)
-dx_spline = interpolate.RectBivariateSpline(x, y, dx, kx=1, ky=1)
-dy_spline = interpolate.RectBivariateSpline(x, y, dy, kx=1, ky=1)
-interpolators = (sdf_spline, dx_spline, dy_spline)
-
-fig, (ax1, ax2, ax3) = plt.subplots(ncols=3)
-ax1.imshow(sdf, cmap='Greys_r')
-ax2.imshow(dx, cmap='Greys_r')
-ax3.imshow(dy, cmap='Greys_r')
-
-d = sdf_spline(X, Y, grid=False)
-nx = dx_spline(X, Y, grid=False)
-ny = dy_spline(X, Y, grid=False)
-nx = d*nx
-ny = d*ny
-mask = d > 0
-
-X_new = X.copy()
-Y_new = Y.copy()
-X_new[mask] = X_new[mask] - nx[mask]
-Y_new[mask] = Y_new[mask] - ny[mask]
-
-# fig, ax = plt.subplots()
-# ax.imshow(sdf, cmap='Greys_r')
-# ax.scatter(X, Y, c='r')
-# ax.quiver(X, Y, nx, ny)
-
-# X, Y = push_with_splines(X, Y, interpolators)
-
-# points = np.array((Gx.flatten(), Gy.flatten())).T
-# values = sdf.flatten()
-# interp_points = np.array((X, Y)).T
-# d = interpolate.griddata(points, values, interp_points)
-
-# fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
-
-# ax.scatter(X, Y, d, c='r')
-# ax.plot_surface(Gx, Gy, sdf, alpha=0.5)
+sdf_spline = interpolate.RectBivariateSpline(y, x, sdf)
+X, Y = push_with_splines(X, Y, sdf_spline)
 
 
-points = np.array((X,Y)).T
+# points = np.array((X,Y)).T
 # points = push_points_inside(points, Gx, Gy, sdf)
 # T = Delaunay(points)
 # triangles = all_triangles(T.simplices, X, Y)
@@ -204,7 +154,7 @@ points = np.array((X,Y)).T
 fig, ax = plt.subplots()
 ax.imshow(im, cmap='Greys_r')
 # ax.triplot(X, Y, T.simplices)
-ax.scatter(X_new, Y_new)
+ax.scatter(X, Y)
 
 plt.show()
 
