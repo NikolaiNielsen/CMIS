@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import sys
 from mpl_toolkits.mplot3d import Axes3D
 from progress.bar import Bar
+import timeit
+from functools import partial as part
 sys.path.append('../')
 import quality_measures as qa
 import useful_functions as uf
@@ -34,6 +36,22 @@ def push_with_splines(x, y, sdf_spline):
     y[mask] = y[mask] - ny[mask]
     return x,y
 
+def push_fully_splines(x, y, sdf_spline, max_tries=3):
+    d = sdf_spline.ev(y, x)
+
+    mask = d > 0
+    counter_max = max_tries + 1
+    for _ in range(counter_max):
+        if np.sum(mask):
+            x, y = push_with_splines(x, y, sdf_spline)
+            d = sdf_spline.ev(y, x)
+
+            mask = d > 0
+        else:
+            return x, y
+    return x, y
+
+
 def push_points_inside(interp_points, Gx, Gy, sdf):
     # interp_points = np.array((X,Y)).T. Shape = (N,2)
     points = np.array((Gx.flatten(), Gy.flatten())).T
@@ -52,7 +70,7 @@ def push_points_inside(interp_points, Gx, Gy, sdf):
     return interp_points
 
 
-def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=2):
+def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=3):
 
     points = np.array((Gx.flatten(), Gy.flatten())).T
     values = sdf.flatten()
@@ -141,8 +159,10 @@ Gx, Gy, sdf, X, Y, im = import_data()
 x = Gx[0,:]
 y = Gy[:,0]
 sdf_spline = interpolate.RectBivariateSpline(y, x, sdf)
-X, Y = push_with_splines(X, Y, sdf_spline)
-
+push1 = part(push_fully_inside, X, Y, Gx, Gy, sdf)
+push2 = part(push_fully_splines, X, Y, sdf_spline)
+print(timeit.timeit(push1, number=2))
+print(timeit.timeit(push2, number=2))
 
 # points = np.array((X,Y)).T
 # points = push_points_inside(points, Gx, Gy, sdf)
@@ -151,12 +171,12 @@ X, Y = push_with_splines(X, Y, sdf_spline)
 # outside = get_outside_triangles(triangles, Gx, Gy, sdf)
 # print(outside)
 
-fig, ax = plt.subplots()
-ax.imshow(im, cmap='Greys_r')
-# ax.triplot(X, Y, T.simplices)
-ax.scatter(X, Y)
+# fig, ax = plt.subplots()
+# ax.imshow(im, cmap='Greys_r')
+# # ax.triplot(X, Y, T.simplices)
+# ax.scatter(X, Y)
 
-plt.show()
+# plt.show()
 
 
 #%%
