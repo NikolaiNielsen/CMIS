@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from mpl_toolkits.mplot3d import Axes3D
+from progress.bar import Bar
 sys.path.append('../')
 import quality_measures as qa
 import useful_functions as uf
@@ -52,7 +53,7 @@ def push_points_inside(interp_points, Gx, Gy, sdf):
     return interp_points
 
 
-def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=3):
+def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=2):
 
     points = np.array((Gx.flatten(), Gy.flatten())).T
     values = sdf.flatten()
@@ -83,6 +84,7 @@ def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=3):
 
 
 def gen_points_in_triangle(v, N=10):
+
     r1 = np.sqrt(np.random.uniform(size=N))
     r2 = np.random.uniform(size=N)
     a = 1-r1
@@ -90,19 +92,60 @@ def gen_points_in_triangle(v, N=10):
     c = r1*r2
     r = np.array((a,b,c))
     points = v.T @ r
+
     return points
 
 
 def verts_from_simplex(simplex, x, y):
     verts = np.array((x[simplex], y[simplex])).T
     return verts
+
+
+def all_triangles(simplices, x, y):
+    N_simplices = simplices.shape[0]
+    verts = np.zeros((N_simplices, 3, 2))
+    for i, simplex in enumerate(simplices):
+        verts[i, :, :] = verts_from_simplex(simplex, x, y)
+    return verts
+
+
+def get_outside_triangles(verts, Gx, Gy, sdf, bar=True):
+    """
+    runs over the list of triangles, and figures out whether they are outside
+    or inside the object
+    """
+    outside = []
+    points = np.array((Gx.flatten(), Gy.flatten())).T
+    values = sdf.flatten()
+    if bar:
+        progress = Bar('Ousides', max=verts.shape[0])
+    for i, vert in enumerate(verts):
+        # First we generate 10 points for each triangle
+        interp_points = gen_points_in_triangle(vert)
+        # Then we interpolate sdf on these points
+        d = interpolate.griddata(points, values, interp_points.T)
+        # if points are inside object, then d < 0
+        mask = d < 0
+        num_inside = np.sum(mask)
+        if num_inside < 10:
+            outside.append(i)
+        if bar:
+            progress.next()
+    
+    if bar:
+        progress.finish()
+    return outside
+        
+
 #%% project particles
 Gx, Gy, sdf, X, Y, im = import_data()
-
-points = push_fully_inside(X, Y, Gx, Gy, sdf)
+points = np.array((X,Y)).T
+points = push_points_inside(points, Gx, Gy, sdf)
 X, Y = points.T
 T = Delaunay(points)
-
+triangles = all_triangles(T.simplices, X, Y)
+# outside = get_outside_triangles(triangles, Gx, Gy, sdf)
+# print(outside)
 
 fig, ax = plt.subplots()
 ax.imshow(im, cmap='Greys_r')
