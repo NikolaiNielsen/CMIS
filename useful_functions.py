@@ -67,6 +67,10 @@ def calc_residual(x1, x2, *args):
     return mean
 
 
+def scale_bw(I):
+    return I/np.amax(I)
+
+
 def bw2phi(I):
     phi = bwdist(np.amax(I)-I) - bwdist(I)
     ind = phi > 0
@@ -93,6 +97,9 @@ def grey_to_sdf(name, ghosts=True):
     """
     im = imageio.imread(name, as_gray=True)
     im = im.astype(np.int)
-    im = add_ghost_nodes(im)
+    im = scale_bw(im)
+    im[im >0] = 1
+    if ghosts:
+        im = add_ghost_nodes(im)
     phi = bw2phi(im)
-    return phi
+    return phi, im
