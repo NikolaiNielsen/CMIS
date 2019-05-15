@@ -23,6 +23,18 @@ def import_data(name='example.bmp', Nverts=500):
     return Gx, Gy, sdf, X, Y, im
 
 
+def push_with_splines(x, y, interpolators):
+    sdf_i, dx_i, dy_i = interpolators
+    d = sdf_i(x, y, grid=False)
+    nx = dx_i(x, y, grid=False)
+    ny = dy_i(x, y, grid=False)
+    nx = d*nx
+    ny = d*ny
+    mask = d > 0
+    x[mask] = x[mask] - nx[mask]
+    y[mask] = y[mask] - ny[mask]
+    return x,y
+
 def push_points_inside(interp_points, Gx, Gy, sdf):
     # interp_points = np.array((X,Y)).T. Shape = (N,2)
     points = np.array((Gx.flatten(), Gy.flatten())).T
@@ -139,18 +151,38 @@ def get_outside_triangles(verts, Gx, Gy, sdf, bar=True):
 
 #%% project particles
 Gx, Gy, sdf, X, Y, im = import_data()
+x = Gx[0,:]
+y = Gy[:,0]
+sdf_spline = interpolate.RectBivariateSpline(x, y, sdf, kx=1, ky=1)
+dy, dx = np.gradient(sdf)
+dx_spline = interpolate.RectBivariateSpline(x, y, dx, kx=1, ky=1)
+dy_spline = interpolate.RectBivariateSpline(x, y, dy, kx=1, ky=1)
+interpolators = (sdf_spline, dx_spline, dy_spline)
+
+X, Y = push_with_splines(X, Y, interpolators)
+
+# points = np.array((Gx.flatten(), Gy.flatten())).T
+# values = sdf.flatten()
+# interp_points = np.array((X, Y)).T
+# d = interpolate.griddata(points, values, interp_points)
+
+# fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+
+# ax.scatter(X, Y, d, c='r')
+# ax.plot_surface(Gx, Gy, sdf, alpha=0.5)
+
+
 points = np.array((X,Y)).T
-points = push_points_inside(points, Gx, Gy, sdf)
-X, Y = points.T
-T = Delaunay(points)
-triangles = all_triangles(T.simplices, X, Y)
+# points = push_points_inside(points, Gx, Gy, sdf)
+# T = Delaunay(points)
+# triangles = all_triangles(T.simplices, X, Y)
 # outside = get_outside_triangles(triangles, Gx, Gy, sdf)
 # print(outside)
 
 fig, ax = plt.subplots()
 ax.imshow(im, cmap='Greys_r')
-ax.triplot(X, Y, T.simplices)
-ax.scatter(X,Y)
+# ax.triplot(X, Y, T.simplices)
+ax.scatter(X, Y)
 
 plt.show()
 
