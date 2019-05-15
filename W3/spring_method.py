@@ -26,28 +26,40 @@ def import_data(name='example.bmp', Nverts=500):
     return Gx, Gy, sdf, X, Y, im
 
 
+def push_points_inside(X, Y, Gx, Gy, sdf):
+    points = np.array((Gx.flatten(), Gy.flatten())).T
+    values = sdf.flatten()
+    interp_points = np.array((X, Y)).T
+
+    d = interpolate.griddata(points, values, interp_points)
+    d_nan = np.isnan(d)
+    d[d_nan] = interpolate.griddata(points, values, interp_points[d_nan, :],
+                                    method='nearest')
+
+    dy, dx = np.gradient(sdf)
+
+    nx = interpolate.griddata(points, dx.flatten(), interp_points)
+    nx_nan = np.isnan(nx)
+    nx[nx_nan] = interpolate.griddata(points, values, interp_points[nx_nan, :],
+                                    method='nearest')
+
+    ny = interpolate.griddata(points, dy.flatten(), interp_points)
+    ny_nan = np.isnan(ny)
+    ny[ny_nan] = interpolate.griddata(points, values, interp_points[ny_nan, :],
+                                    method='nearest')
+    nx = d*nx
+    ny = d*ny
+    mask = d > 0
+    X[mask] = X[mask] - nx[mask]
+    Y[mask] = Y[mask] - ny[mask]
+
+    return X, Y
+
 #%% project particles
 Gx, Gy, sdf, X, Y, im = import_data()
-points = np.array((Gx.flatten(), Gy.flatten())).T
-values = sdf.flatten()
-interp_points = np.array((X,Y)).T
 
-d = interpolate.griddata(points, values, interp_points)
-d_nan = np.isnan(d)
-d[d_nan] = interpolate.griddata(points, values, interp_points[d_nan,:],
-                                method='nearest')
-
-dy, dx = np.gradient(sdf)
-
-nx = interpolate.griddata(points, dx.flatten(), interp_points)
-nx_nan = np.isnan(nx)
-nx[nx_nan] = interpolate.griddata(points, values, interp_points[nx_nan, :],
-                                  method='nearest')
-
-ny = interpolate.griddata(points, dy.flatten(), interp_points)
-ny_nan = np.isnan(ny)
-ny[ny_nan] = interpolate.griddata(points, values, interp_points[ny_nan, :],
-                                  method='nearest')
+X, Y = push_points_inside(X, Y, Gx, Gy, sdf)
+X, Y = push_points_inside(X, Y, Gx, Gy, sdf)
 
 
 # fig2, ax2 = plt.subplots(subplot_kw=dict(projection='3d'))
@@ -67,11 +79,6 @@ ny[ny_nan] = interpolate.griddata(points, values, interp_points[ny_nan, :],
 # ax3.set_xlim(limits+extra)
 # ax3.set_ylim(limits+extra)
 # ax3.set_title('dy interpolated')
-
-
-nx = d*nx
-ny = d*ny
-
 
 # fig, ax = plt.subplots()
 # ax.imshow(sdf, cmap='Greys_r')
@@ -94,13 +101,6 @@ ny = d*ny
 # nyf = ny.flatten()
 # ax4.plot(np.sort(nxf))
 # ax4.plot(np.sort(nyf))
-
-
-
-mask = d > 0
-
-X[mask] = X[mask] - nx[mask]
-Y[mask] = Y[mask] - ny[mask]
 
 fig5, ax5 = plt.subplots()
 ax5.imshow(im, cmap='Greys_r')
