@@ -1,5 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import ndimage
+import imageio
+
+bwdist = ndimage.morphology.distance_transform_edt
+
 
 def linspace_with_ghosts(a, b, n):
     """
@@ -60,3 +65,34 @@ def calc_residual(x1, x2, *args):
     square = diff ** 2
     mean = np.sum(square)/square.size
     return mean
+
+
+def bw2phi(I):
+    phi = bwdist(np.amax(I)-I) - bwdist(I)
+    ind = phi > 0
+    phi[ind] = phi[ind] - 0.5
+    ind = phi < 0
+    phi[ind] = phi[ind] + 0.5
+    return phi
+
+
+def add_ghost_nodes(phi):
+    """
+    Adds a border of ghost nodes to the array
+    """
+    N, M = phi.shape
+    a = np.zeros((N+2, M+2))
+    a[1:-1, 1:-1] = phi
+    return a
+
+
+def grey_to_sdf(name, ghosts=True):
+    """
+    Read an image as a grayscale image, converts to integers, and then returns
+    the signed distance field
+    """
+    im = imageio.imread(name, as_gray=True)
+    im = im.astype(np.int)
+    im = add_ghost_nodes(im)
+    phi = bw2phi(im)
+    return phi
