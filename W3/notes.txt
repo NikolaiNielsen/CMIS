@@ -1,0 +1,7 @@
+Pick 2 quality measures:
+- min angle
+- volume length
+
+Implement 1 mesh-generation yourself
+Use an external mesh-generation
+Compare the two with quality measures
