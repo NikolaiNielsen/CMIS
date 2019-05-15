@@ -53,21 +53,29 @@ def push_points_inside(X, Y, Gx, Gy, sdf):
 
 
 def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=3):
-    mask = True
-    counter_max = max_tries + 1
+
+    points = np.array((Gx.flatten(), Gy.flatten())).T
+    values = sdf.flatten()
+    interp_points = np.array((X, Y)).T
+    d = interpolate.griddata(points, values, interp_points)
+    d_nan = np.isnan(d)
+    d[d_nan] = interpolate.griddata(points, values,
+                                    interp_points[d_nan, :],
+                                    method='nearest')
+    mask = d > 0
+    counter_max = max_tries+1
+
     for _ in range(counter_max):
         if np.sum(mask):
-            X, Y = push_points_inside(X, Y, Gx, Gy, sdf)
+            X[mask], Y[mask] = push_points_inside(X[mask], Y[mask], Gx, Gy, sdf)
 
-            points = np.array((Gx.flatten(), Gy.flatten())).T
-            values = sdf.flatten()
             interp_points = np.array((X, Y)).T
-
             d = interpolate.griddata(points, values, interp_points)
             d_nan = np.isnan(d)
             d[d_nan] = interpolate.griddata(points, values,
                                             interp_points[d_nan, :],
                                             method='nearest')
+
             mask = d > 0
         else:
             return X, Y
@@ -84,31 +92,35 @@ def gen_points_in_triangle(v, N=10):
     points = v.T @ r
     return points
 
+
+def verts_from_simplex(simplex, x, y):
+    verts = np.array((x[simplex], y[simplex])).T
+    return verts
 #%% project particles
-# Gx, Gy, sdf, X, Y, im = import_data()
+Gx, Gy, sdf, X, Y, im = import_data()
 
-# X, Y = push_fully_inside(X, Y, Gx, Gy, sdf)
+X, Y = push_fully_inside(X, Y, Gx, Gy, sdf)
 
-# points = np.array((X, Y)).T
-# T = Delaunay(points)
+points = np.array((X, Y)).T
+T = Delaunay(points)
 
 
-# fig, ax = plt.subplots()
-# ax.imshow(im, cmap='Greys_r')
-# ax.triplot(X, Y, T.simplices)
-# ax.scatter(X,Y)
+fig, ax = plt.subplots()
+ax.imshow(im, cmap='Greys_r')
+ax.triplot(X, Y, T.simplices)
+ax.scatter(X,Y)
 
-# plt.show()
+plt.show()
 
 
 #%%
-a = np.array(((1,1),(2,4),(5,2)))
-points = gen_points_in_triangle(a, N=10)
-x, y = points
-fig, ax = plt.subplots()
-# ax.plot(a[[0,1],0], a[[0,1],1], 'b')
-# ax.plot(a[[0,2],0], a[[0,2],1], 'b')
-# ax.plot(a[[1,2],0], a[[1,2],1], 'b')
-# ax.scatter(a[:,0], a[:,1], s=36)
-ax.scatter(x,y, s=1)
-plt.show()
+# a = np.array(((1,1),(2,4),(5,2)))
+# points = gen_points_in_triangle(a, N=10)
+# x, y = points
+# fig, ax = plt.subplots()
+# # ax.plot(a[[0,1],0], a[[0,1],1], 'b')
+# # ax.plot(a[[0,2],0], a[[0,2],1], 'b')
+# # ax.plot(a[[1,2],0], a[[1,2],1], 'b')
+# # ax.scatter(a[:,0], a[:,1], s=36)
+# ax.scatter(x,y, s=1)
+# plt.show()
