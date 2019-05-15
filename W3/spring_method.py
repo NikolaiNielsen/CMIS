@@ -19,8 +19,9 @@ np.set_printoptions(threshold=np.inf)
 def import_data(name='example.bmp', Nverts=500):
     sdf, im = uf.grey_to_sdf(name, ghosts=False)
     Nx, Ny = sdf.shape
-    X = np.random.uniform(0, Nx, Nverts)
-    Y = np.random.uniform(0, Ny, Nverts)
+    border = 0.5
+    X = np.random.uniform(border, Nx-border, Nverts)
+    Y = np.random.uniform(border, Ny-border, Nverts)
     Gx, Gy = np.meshgrid(np.arange(Nx), np.arange(Ny))
     return Gx, Gy, sdf, X, Y, im
 
