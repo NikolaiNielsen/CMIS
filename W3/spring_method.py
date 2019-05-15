@@ -159,7 +159,29 @@ dx_spline = interpolate.RectBivariateSpline(x, y, dx, kx=1, ky=1)
 dy_spline = interpolate.RectBivariateSpline(x, y, dy, kx=1, ky=1)
 interpolators = (sdf_spline, dx_spline, dy_spline)
 
-X, Y = push_with_splines(X, Y, interpolators)
+fig, (ax1, ax2, ax3) = plt.subplots(ncols=3)
+ax1.imshow(sdf, cmap='Greys_r')
+ax2.imshow(dx, cmap='Greys_r')
+ax3.imshow(dy, cmap='Greys_r')
+
+d = sdf_spline(X, Y, grid=False)
+nx = dx_spline(X, Y, grid=False)
+ny = dy_spline(X, Y, grid=False)
+nx = d*nx
+ny = d*ny
+mask = d > 0
+
+X_new = X.copy()
+Y_new = Y.copy()
+X_new[mask] = X_new[mask] - nx[mask]
+Y_new[mask] = Y_new[mask] - ny[mask]
+
+# fig, ax = plt.subplots()
+# ax.imshow(sdf, cmap='Greys_r')
+# ax.scatter(X, Y, c='r')
+# ax.quiver(X, Y, nx, ny)
+
+# X, Y = push_with_splines(X, Y, interpolators)
 
 # points = np.array((Gx.flatten(), Gy.flatten())).T
 # values = sdf.flatten()
@@ -182,7 +204,7 @@ points = np.array((X,Y)).T
 fig, ax = plt.subplots()
 ax.imshow(im, cmap='Greys_r')
 # ax.triplot(X, Y, T.simplices)
-ax.scatter(X, Y)
+ax.scatter(X_new, Y_new)
 
 plt.show()
 
