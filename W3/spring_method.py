@@ -22,10 +22,10 @@ def import_data(name='example.bmp', Nverts=500):
     return Gx, Gy, sdf, X, Y, im
 
 
-def push_points_inside(X, Y, Gx, Gy, sdf):
+def push_points_inside(interp_points, Gx, Gy, sdf):
+    # interp_points = np.array((X,Y)).T. Shape = (N,2)
     points = np.array((Gx.flatten(), Gy.flatten())).T
     values = sdf.flatten()
-    interp_points = np.array((X, Y)).T
 
     d = interpolate.griddata(points, values, interp_points)
     d_nan = np.isnan(d)
@@ -46,10 +46,10 @@ def push_points_inside(X, Y, Gx, Gy, sdf):
     nx = d*nx
     ny = d*ny
     mask = d > 0
-    X[mask] = X[mask] - nx[mask]
-    Y[mask] = Y[mask] - ny[mask]
+    diff = np.array((nx, ny)).T
+    interp_points[mask,:] = interp_points[mask] - diff[mask, :]
 
-    return X, Y
+    return interp_points
 
 
 def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=3):
@@ -67,9 +67,9 @@ def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=3):
 
     for _ in range(counter_max):
         if np.sum(mask):
-            X[mask], Y[mask] = push_points_inside(X[mask], Y[mask], Gx, Gy, sdf)
+            interp_points[mask,:] = push_points_inside(interp_points[mask,:],
+                                                       Gx, Gy, sdf)
 
-            interp_points = np.array((X, Y)).T
             d = interpolate.griddata(points, values, interp_points)
             d_nan = np.isnan(d)
             d[d_nan] = interpolate.griddata(points, values,
@@ -78,8 +78,8 @@ def push_fully_inside(X, Y, Gx, Gy, sdf, max_tries=3):
 
             mask = d > 0
         else:
-            return X, Y
-    return X, Y
+            return interp_points
+    return interp_points
 
 
 def gen_points_in_triangle(v, N=10):
@@ -99,9 +99,8 @@ def verts_from_simplex(simplex, x, y):
 #%% project particles
 Gx, Gy, sdf, X, Y, im = import_data()
 
-X, Y = push_fully_inside(X, Y, Gx, Gy, sdf)
-
-points = np.array((X, Y)).T
+points = push_fully_inside(X, Y, Gx, Gy, sdf)
+X, Y = points.T
 T = Delaunay(points)
 
 
