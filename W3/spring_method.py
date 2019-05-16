@@ -161,19 +161,38 @@ def calc_com(vertices, x, y):
     return np.array((x_com, y_com))
 
 
+def update_positions(simplices, x, y, tau=0.5):
+    # first we generate the list of vertices:
+    N = np.amax(simplices) + 1
+    vertices = np.arange(N)
+    com_positions = np.zeros((N, 2))
+    for i in vertices:
+        neighbors = find_all_neighbours(simplices, i)
+        com_positions[i, :] = calc_com(neighbors, x, y)
+    
+    positions = np.array((x,y)).T
+    new_pos = positions - tau * (com_positions - positions)
+    x_new, y_new = new_pos.T
+    return x_new, y_new
+
 #%% project particles
 Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 
 X, Y = push_fully_inside(X, Y, sdf_spline)
 points = np.array((X, Y)).T
 T = Delaunay(points)
-inside_simplices, outside = discard_outside_triangles(T.simplices, X, Y, sdf_spline)
+X_new, Y_new = update_positions(T.simplices, X, Y)
+X_new, Y_new = push_fully_inside(X_new, Y_new, sdf_spline)
+points = np.array((X_new, Y_new)).T
+T = Delaunay(points)
+
+
 
 fig, ax = plt.subplots()
-ax.imshow(sdf, cmap='Greys_r')
-ax.triplot(X, Y, outside, color='b')
-ax.triplot(X, Y, inside_simplices, color='r')
-ax.scatter(X, Y)
+ax.imshow(im, cmap='Greys_r')
+ax.triplot(X_new, Y_new, T.simplices, color='b')
+ax.scatter(X, Y, color='r', s=5)
+ax.scatter(X_new, Y_new, color='b', s=5)
 plt.show()
 
 
