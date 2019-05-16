@@ -54,7 +54,6 @@ def push_fully_inside(x, y, sdf_spline, max_tries=3):
     return x, y
 
 
-
 def gen_points_in_triangle(v, N=10):
     """
     Generate N points uniformly distributed inside a triangle, defined by
@@ -122,29 +121,30 @@ def discard_outside_triangles(simplices, x, y, sdf_spline):
                       triangle_points_reshaped[:, 1])
     
     d_reshaped = d.reshape((dims[0], 10))
-    d_mask = d_reshaped > 0
-    d_sum = np.sum(d_mask, axis=1)
-    triangles_to_keep = d_sum == 10
+    d_inside = d_reshaped <= 0
+    n_inside = np.sum(d_inside, axis=1)
+    print(n_inside)
+    triangles_to_keep = n_inside == N_points
     return simplices[triangles_to_keep]
         
 
 #%% project particles
 Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 
-
-
-points = np.array((X,Y)).T
-# points = push_points_inside(points, Gx, Gy, sdf)
+X, Y = push_fully_inside(X, Y, sdf_spline)
+points = np.array((X, Y)).T
 T = Delaunay(points)
+print(T.simplices.shape)
 inside_simplices = discard_outside_triangles(T.simplices, X, Y, sdf_spline)
+print(inside_simplices.shape)
 # print(outside)
 
-# fig, ax = plt.subplots()
-# ax.imshow(im, cmap='Greys_r')
-# # ax.triplot(X, Y, T.simplices)
-# ax.scatter(X, Y)
+fig, ax = plt.subplots()
+ax.imshow(im, cmap='Greys_r')
+ax.triplot(X, Y, inside_simplices)
+ax.scatter(X, Y)
 
-# plt.show()
+plt.show()
 
 
 #%%
