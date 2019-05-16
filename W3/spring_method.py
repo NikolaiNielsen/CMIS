@@ -107,12 +107,20 @@ def discard_outside_triangles(simplices, x, y, sdf_spline):
     """
     verts = all_triangles(simplices, x, y)
     dims = verts.shape
-    N_points = 10
+    N_points = 20
     triangle_points = np.zeros((dims[0], N_points, 2))
+    triangles_inside = np.zeros(dims[0])
+    d_threshold = 3
     for i, vert in enumerate(verts):
         # First we generate 10 points for each triangle and throw them in the
         # array
-        triangle_points[i, :, :] = gen_points_in_triangle(vert, N_points).T
+        points = gen_points_in_triangle(vert, N_points).T
+        triangle_points[i, :, :] = points
+        d_triangle = sdf_spline.ev(points[:,0], points[:,1])
+        d_inside = d_triangle <= d_threshold
+        n_inside = np.sum(d_inside)
+        inside = n_inside == N_points
+        triangles_inside[i] = inside
 
     # reshape array for easy d-calculation with splines
     triangle_points_reshaped = triangle_points.reshape((dims[0] * N_points, 2))
@@ -120,13 +128,25 @@ def discard_outside_triangles(simplices, x, y, sdf_spline):
     d = sdf_spline.ev(triangle_points_reshaped[:, 0],
                       triangle_points_reshaped[:, 1])
     
-    d_reshaped = d.reshape((dims[0], 10))
-    d_inside = d_reshaped <= 0
+    d_reshaped = d.reshape((dims[0], N_points))
+    d_inside = d_reshaped <= d_threshold
     n_inside = np.sum(d_inside, axis=1)
-    print(n_inside)
     triangles_to_keep = n_inside == N_points
-    return simplices[triangles_to_keep]
+    return simplices[triangles_to_keep], simplices[~ triangles_to_keep]
         
+
+def find_all_neighbours(simplices, n):
+    """
+    Finds all neighbouring vertices to the n'th vertex
+    """
+
+    neighbours = simplices == n
+    neighbour_mask = np.sum(neighbours, axis=1).astype(bool)
+    neighbouring_simplices = simplices[neighbour_mask]
+    unique_verts = np.unique(neighbouring_simplices).flatten()
+    unique_verts = unique_verts[unique_verts != n]
+    return unique_verts
+
 
 #%% project particles
 Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
@@ -134,16 +154,13 @@ Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 X, Y = push_fully_inside(X, Y, sdf_spline)
 points = np.array((X, Y)).T
 T = Delaunay(points)
-print(T.simplices.shape)
-inside_simplices = discard_outside_triangles(T.simplices, X, Y, sdf_spline)
-print(inside_simplices.shape)
-# print(outside)
+inside_simplices, outside = discard_outside_triangles(T.simplices, X, Y, sdf_spline)
 
 fig, ax = plt.subplots()
-ax.imshow(im, cmap='Greys_r')
-ax.triplot(X, Y, inside_simplices)
+ax.imshow(sdf, cmap='Greys_r')
+ax.triplot(X, Y, outside, color='b')
+ax.triplot(X, Y, inside_simplices, color='r')
 ax.scatter(X, Y)
-
 plt.show()
 
 
