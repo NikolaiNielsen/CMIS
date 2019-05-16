@@ -148,6 +148,19 @@ def find_all_neighbours(simplices, n):
     return unique_verts
 
 
+def calc_com(vertices, x, y):
+    """
+    Calculates the center of mass (with masses assumed equal), for the input
+    vertices
+    """
+    N = vertices.size
+    x_verts = x[vertices]
+    y_verts = y[vertices]
+    x_com = np.sum(x_verts)/N
+    y_com = np.sum(y_verts)/N
+    return np.array((x_com, y_com))
+
+
 #%% project particles
 Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 
