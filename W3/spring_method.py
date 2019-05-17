@@ -117,7 +117,7 @@ def discard_outside_triangles(simplices, x, y, sdf_spline):
         # array
         points = gen_points_in_triangle(vert, N_points).T
         triangle_points[i, :, :] = points
-        d_triangle = sdf_spline.ev(points[:,0], points[:,1])
+        d_triangle = sdf_spline.ev(points[:,1], points[:,0])
         d_inside = d_triangle <= d_threshold
         n_inside = np.sum(d_inside)
         inside = n_inside == N_points
@@ -155,6 +155,7 @@ def calc_com(vertices, x, y):
     vertices
     """
     N = vertices.size
+    print(vertices)
     x_verts = x[vertices]
     y_verts = y[vertices]
     x_com = np.sum(x_verts)/N
@@ -164,14 +165,13 @@ def calc_com(vertices, x, y):
 
 def update_positions(simplices, x, y, tau=0.5):
     # first we generate the list of vertices:
-    N = np.amax(simplices) + 1
+    N = x.size
     vertices = np.arange(N)
-    com_positions = np.zeros((N, 2))
+    positions = np.array((x, y)).T
+    com_positions = np.zeros(positions.shape)
     for i in vertices:
         neighbors = find_all_neighbours(simplices, i)
         com_positions[i, :] = calc_com(neighbors, x, y)
-    
-    positions = np.array((x,y)).T
     new_pos = positions - tau * (com_positions - positions)
     x_new, y_new = new_pos.T
     return x_new, y_new
@@ -182,29 +182,43 @@ def create_mesh(name, N_verts=500, threshold=200,
     """
     Creates a mesh of a given image. 
     """
-    Gx, Gy, sdf, X, Y, im, sdf_spline = import_data(name, N_verts,
-                                                    threshold, invert)
+    _, _, _, X, Y, im, sdf_spline = import_data(name, N_verts,
+                                                threshold, invert)
     
     X, Y = push_fully_inside(X, Y, sdf_spline, max_tries=N_tries)
     points = np.array((X, Y)).T
     T = Delaunay(points)
-
+    simplices = T.simplices
     for i in range(N_iter):
-        X, Y = update_positions(T.simplices, X, Y, tau=tau)
+        X, Y = update_positions(simplices, X, Y, tau=tau)
         X, Y = push_fully_inside(X, Y, sdf_spline, max_tries=N_tries)
         points = np.array((X, Y)).T
-        T = Delaunay(points)
-    
+        simplices = Delaunay(points).simplices
+        simplices, _ = discard_outside_triangles(simplices, X, Y, sdf_spline)
     return X, Y, T, im
 
+
 #%% project particles
-X, Y, T, im = create_mesh('example.bmp')
+X, Y, T, im = create_mesh('example.bmp', N_verts=200)
+# Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
+# v = np.array(((50,70),(200,10),(200,150)))
+# np.set_printoptions(threshold=np.inf)
+
+# points = gen_points_in_triangle(v, N=2000)
+# d = sdf_spline.ev(points[:,1], points[:,0])
+# inside = d <= 0
 
 fig, ax = plt.subplots()
 ax.imshow(im, cmap='Greys_r')
-# ax.triplot(X, Y, T.simplices, color='b')
+ax.triplot(X, Y, T.simplices, color='b')
 ax.scatter(X, Y, color='b', s=5)
+# ax.scatter(v[:,0], v[:,1])
+# ax.scatter(points[inside,0], points[inside,1], s=5, color='b')
+# ax.scatter(points[~inside,0], points[~inside,1], s=5, color='r')
+
 plt.show()
+
+
 
 #%%
 # a = np.array(((1,1),(2,4),(5,2)))
