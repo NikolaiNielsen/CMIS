@@ -90,18 +90,22 @@ def add_ghost_nodes(phi):
     return a
 
 
-def binarize_grey(im, threshold=200):
-    return np.where(im > threshold, 255, 0)
+def binarize_grey(im, threshold=200, invert=False):
+    max_ = 255
+    min_ =  0
+    if invert:
+        min_, max_ = max_, min_
+    return np.where(im > threshold, max_, min_)
 
 
-def grey_to_sdf(name, ghosts=True, threshold=200):
+def grey_to_sdf(name, ghosts=True, threshold=200, invert=False):
     """
-    Read an image as a grayscale image, converts to integers, and then returns
-    the signed distance field
+    Read an image as a grayscale image, converts to B/W, and then returns
+    the signed distance field. Adds ghost nodes to the edges as well, if needed
     """
     im = imageio.imread(name, as_gray=True)
     im = im.astype(np.int)
-    im = binarize_grey(im, threshold=threshold)
+    im = binarize_grey(im, threshold=threshold, invert=invert)
     im = scale_bw(im)
     im[im >0] = 1
     if ghosts:
