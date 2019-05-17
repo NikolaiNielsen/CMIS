@@ -334,35 +334,61 @@ def read_node(name='example.1.node'):
     return vertices
 
 
-def get_contour(name='example.bmp'):
+def get_contour(name='example.bmp', outfile='example.poly'):
     Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
     fig, ax = plt.subplots()
     contour = ax.contour(Gx, Gy, sdf, levels=0)
-    contour_sets = contourplot.collections
-    print(contour_sets.shape)
+    contour_sets = contour.collections
+    filled_sets = []
+    for set_ in contour_sets:
+        if len(set_.get_paths()):
+            filled_sets.append(set_.get_paths())
+    contours = []
+    for i in filled_sets:
+        for cont in i:
+            contours.append(cont.vertices)
+    
+    N_contours = len(contours)
+    N_verts = 0
+    for i in contours:
+        N_verts += i.shape[0]
+    
+    N_segments = N_verts
+    with open(outfile, 'w') as f:
+        vert_num = 1
+        seg_num = 1
+        f.write(f'{N_verts} 2 0 1\n')
+        for i in contours:
+            x, y = i.T
+            for n in range(x.size):
+                f.write(f'{vert_num} {x[n]} {y[n]} {seg_num}\n')
+                vert_num += 1
+            seg_num += 1
+        
+        vert_num, seg_num = 1, 1
+        f.write(f'{N_segments} 1\n')
+        for i in contours:
+            x, y = i.T
+            for n in range(x.size):
+                f.write(f'{vert_num} {vert_num} {vert_num+1} {seg_num}\n')
+                vert_num += 1
+            seg_num += 1
+        
+        f.write('0\n')
 
-
-def calc_area_contour(contourplot, level_n=0):
-    contours = contourplot.collections[level_n].get_paths()
-    area = 0
-    for cont in contours:
-        vertices = cont.vertices
-        x, y = vertices.T
-        area += np.abs(0.5*np.sum(y[:-1]*np.diff(x) - x[:-1]*np.diff(y)))
-    return area
 
 
 #%%
 get_contour()
 
 #%% project particles
-x, y, simplices = read_from_triangle()
-Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
+# x, y, simplices = read_from_triangle()
+# Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 
-fig, (ax1, ax2) = plt.subplots(ncols=2)
-ax1.imshow(im, cmap='Greys_r')
-ax1.triplot(x, y, simplices)
-ax1.scatter(x,y)
+# fig, (ax1, ax2) = plt.subplots(ncols=2)
+# ax1.imshow(im, cmap='Greys_r')
+# ax1.triplot(x, y, simplices)
+# ax1.scatter(x,y)
 
-ax2 = plot_quality(simplices, x, y, ax=ax2)
-plt.show()
+# ax2 = plot_quality(simplices, x, y, ax=ax2)
+# plt.show()
