@@ -188,7 +188,15 @@ def calc_side_lengths(triangles):
     ell - (n, 3) - sidelengths of triangle. Ascending order
                    (l_min, l_med, l_max)
     """
-    pass
+    N = triangles.shape[0]
+    # Index to cyclic permute vertices
+    ind = [2, 0, 1]
+    shifted = triangles[:, ind]
+    diff = triangles - shifted
+    square = diff**2
+    lengths = np.sqrt(np.sum(square, axis=2))
+    return np.sort(lengths, axis=1)
+
 
 
 def calc_area_of_triangle(l):
