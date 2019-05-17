@@ -126,8 +126,8 @@ def discard_outside_triangles(simplices, x, y, sdf_spline):
     # reshape array for easy d-calculation with splines
     triangle_points_reshaped = triangle_points.reshape((dims[0] * N_points, 2))
     # Calculate d for all points
-    d = sdf_spline.ev(triangle_points_reshaped[:, 0],
-                      triangle_points_reshaped[:, 1])
+    d = sdf_spline.ev(triangle_points_reshaped[:, 1],
+                      triangle_points_reshaped[:, 0])
     
     d_reshaped = d.reshape((dims[0], N_points))
     d_inside = d_reshaped <= d_threshold
@@ -155,7 +155,6 @@ def calc_com(vertices, x, y):
     vertices
     """
     N = vertices.size
-    print(vertices)
     x_verts = x[vertices]
     y_verts = y[vertices]
     x_com = np.sum(x_verts)/N
@@ -169,9 +168,13 @@ def update_positions(simplices, x, y, tau=0.5):
     vertices = np.arange(N)
     positions = np.array((x, y)).T
     com_positions = np.zeros(positions.shape)
+    mask = np.zeros(N)
     for i in vertices:
         neighbors = find_all_neighbours(simplices, i)
-        com_positions[i, :] = calc_com(neighbors, x, y)
+        mask[i] = neighbors.size
+        if mask[i]:
+            com_positions[i, :] = calc_com(neighbors, x, y)
+    mask = mask.astype(bool)
     new_pos = positions - tau * (com_positions - positions)
     x_new, y_new = new_pos.T
     return x_new, y_new
@@ -189,6 +192,7 @@ def create_mesh(name, N_verts=500, threshold=200,
     points = np.array((X, Y)).T
     T = Delaunay(points)
     simplices = T.simplices
+    simplices, _ = discard_outside_triangles(simplices, X, Y, sdf_spline)
     for i in range(N_iter):
         X, Y = update_positions(simplices, X, Y, tau=tau)
         X, Y = push_fully_inside(X, Y, sdf_spline, max_tries=N_tries)
