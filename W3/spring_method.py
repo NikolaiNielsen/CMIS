@@ -334,7 +334,7 @@ def read_node(name='example.1.node'):
     return vertices
 
 
-def get_contour(name='example.bmp', outfile='example.poly'):
+def get_contour(name='example.bmp', outfile='example.poly', N=100):
     Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
     fig, ax = plt.subplots()
     contour = ax.contour(Gx, Gy, sdf, levels=0)
@@ -352,7 +352,8 @@ def get_contour(name='example.bmp', outfile='example.poly'):
     N_verts = 0
     for i in contours:
         N_verts += i.shape[0]
-    
+    N_verts = N_contours * N
+
     N_segments = N_verts
     with open(outfile, 'w') as f:
         vert_num = 1
@@ -360,8 +361,12 @@ def get_contour(name='example.bmp', outfile='example.poly'):
         f.write(f'{N_verts} 2 0 1\n')
         for i in contours:
             x, y = i.T
+            
+            xp = np.arange(x.size)
+            x_new = np.interp(np.linspace(0, x.size, N), xp, x)
+            y_new = np.interp(np.linspace(0, x.size, N), xp, y)
             for n in range(x.size):
-                f.write(f'{vert_num} {x[n]} {y[n]} {seg_num}\n')
+                f.write(f'{vert_num} {x_new[n]} {y_new[n]} {seg_num}\n')
                 vert_num += 1
             seg_num += 1
         
