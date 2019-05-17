@@ -177,25 +177,33 @@ def update_positions(simplices, x, y, tau=0.5):
     return x_new, y_new
 
 
+def create_mesh(name, N_verts=500, threshold=200,
+                invert=False, N_iter=10, N_tries=3, tau=0.3):
+    """
+    Creates a mesh of a given image. 
+    """
+    Gx, Gy, sdf, X, Y, im, sdf_spline = import_data(name, N_verts,
+                                                    threshold, invert)
+    
+    X, Y = push_fully_inside(X, Y, sdf_spline, max_tries=N_tries)
+    points = np.array((X, Y)).T
+    T = Delaunay(points)
+
+    for i in range(N_iter):
+        X, Y = update_positions(T.simplices, X, Y, tau=tau)
+        X, Y = push_fully_inside(X, Y, sdf_spline, max_tries=N_tries)
+        points = np.array((X, Y)).T
+        T = Delaunay(points)
+    
+    return X, Y, T, im
+
 #%% project particles
-Gx, Gy, sdf, X, Y, im, sdf_spline = import_data(name='EG_WEB_logo.jpg',
-                                                invert=True)
-
-# X, Y = push_fully_inside(X, Y, sdf_spline)
-# points = np.array((X, Y)).T
-# T = Delaunay(points)
-# X_new, Y_new = update_positions(T.simplices, X, Y)
-# X_new, Y_new = push_fully_inside(X_new, Y_new, sdf_spline)
-# points = np.array((X_new, Y_new)).T
-# T = Delaunay(points)
-
-
+X, Y, T, im = create_mesh('example.bmp')
 
 fig, ax = plt.subplots()
 ax.imshow(im, cmap='Greys_r')
-# ax.triplot(X_new, Y_new, T.simplices, color='b')
-ax.scatter(X, Y, color='r', s=5)
-# ax.scatter(X_new, Y_new, color='b', s=5)
+# ax.triplot(X, Y, T.simplices, color='b')
+ax.scatter(X, Y, color='b', s=5)
 plt.show()
 
 #%%
