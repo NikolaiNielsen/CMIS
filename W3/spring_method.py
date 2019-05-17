@@ -175,8 +175,10 @@ def update_positions(simplices, x, y, tau=0.5):
         if mask[i]:
             com_positions[i, :] = calc_com(neighbors, x, y)
     mask = mask.astype(bool)
+    outside = np.sum(mask == False)
     new_pos = positions - tau * (com_positions - positions)
-    x_new, y_new = new_pos.T
+    x_new, y_new = new_pos[mask,:].T
+    # print(outside, x_new.shape)
     return x_new, y_new
 
 
@@ -199,11 +201,11 @@ def create_mesh(name, N_verts=500, threshold=200,
         points = np.array((X, Y)).T
         simplices = Delaunay(points).simplices
         simplices, _ = discard_outside_triangles(simplices, X, Y, sdf_spline)
-    return X, Y, T, im
+    return X, Y, simplices, im
 
 
 #%% project particles
-X, Y, T, im = create_mesh('example.bmp', N_verts=200)
+X, Y, simplices, im = create_mesh('example.bmp', N_verts=500, N_iter=10)
 # Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 # v = np.array(((50,70),(200,10),(200,150)))
 # np.set_printoptions(threshold=np.inf)
@@ -214,7 +216,7 @@ X, Y, T, im = create_mesh('example.bmp', N_verts=200)
 
 fig, ax = plt.subplots()
 ax.imshow(im, cmap='Greys_r')
-ax.triplot(X, Y, T.simplices, color='b')
+ax.triplot(X, Y, simplices, color='b')
 ax.scatter(X, Y, color='b', s=5)
 # ax.scatter(v[:,0], v[:,1])
 # ax.scatter(points[inside,0], points[inside,1], s=5, color='b')
