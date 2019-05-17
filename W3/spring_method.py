@@ -286,8 +286,8 @@ def plot_quality(simplices, x, y, N_bins=20, ax=None):
     else:
         return_fig = False
     Q1, Q2 = calc_quality(simplices, x, y)
-    ax.hist(Q1, N_bins, histtype='step', label='Q1')
-    ax.hist(Q2, N_bins, histtype='step', label='Q2')
+    ax.hist(Q1, N_bins, range=(0,1), histtype='step', label='Q1 - min angle')
+    ax.hist(Q2, N_bins, range=(0,1), histtype='step', label='Q2 - aspect')
     ax.legend()
     if return_fig:
         return fig, ax
@@ -338,8 +338,10 @@ def read_node(name='example.1.node'):
 x, y, simplices = read_from_triangle()
 Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 
-fig, ax = plt.subplots()
-ax.imshow(im, cmap='Greys_r')
-ax.triplot(x, y, simplices)
-ax.scatter(x,y)
+fig, (ax1, ax2) = plt.subplots(ncols=2)
+ax1.imshow(im, cmap='Greys_r')
+ax1.triplot(x, y, simplices)
+ax1.scatter(x,y)
+
+ax2 = plot_quality(simplices, x, y, ax=ax2)
 plt.show()
