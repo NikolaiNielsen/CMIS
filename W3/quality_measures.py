@@ -37,7 +37,6 @@ def calc_area_of_triangle(l):
     s = np.sum(l, axis=1) / 2
     s = np.atleast_2d(s).T
     coefs = s-l
-    print(coefs)
     A = np.sqrt(s.T*np.product(coefs, axis=1))
     return np.squeeze(A)
 
@@ -75,3 +74,11 @@ def calc_aspect_ratio_norm(A, l):
     l = np.atleast_2d(l)
     r = 4*np.sqrt(3)*A/np.sum(l**2, axis=1)
     return r
+
+
+if __name__ == "__main__":
+    a = np.array((((2, 2), (4, 1), (6, 3)), ((2, 9), (8, 11), (6, 5))))
+    lengths = calc_side_lengths(a)
+    areas = calc_area_of_triangle(lengths)
+    theta = calc_min_angle_norm(areas, lengths)
+    r = calc_aspect_ratio_norm(areas, lengths)
