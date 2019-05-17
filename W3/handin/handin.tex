@@ -30,7 +30,7 @@
 \maketitle
 
 \section{Generating computational meshes}
-In this hand-in we tackle the problem of generating computational meshes. We do this in two ways: One is from scratch, where we generate a mesh on
+In this hand-in we tackle the problem of generating and evaluating the quality of computational meshes for use with the finite element method. We do this in two ways: One is from scratch, where we generate a mesh from a source image by sampling random points, projecting them and jostling them about, whilst the other is by using the external tool \texttt{Triangle} created by J. R. Shewchuk.
 
 
 
@@ -119,6 +119,8 @@ In particular we use the minimum angle (in radians) measure and the RMS aspect r
 These quality measures are calculated for each triangle in the mesh, and the results are analysed to measure the quality. If we have but one triangle with a quality measure value of 0 we discard the mesh as one of low quality, even if several triangles have a quality measure value of 1. In general we want a large spike of quality measure values (for both measures) as close to 1 as possible. To analyse this we plot the quality measures for each mesh in a histogram.
 
 \section{Experiments}
+For this weeks experiments we compare the two methods of generating meshes from source images. We test with the two sample images provided in this week and the last, along with an image with several separate geometries.
+
 First we look at the meshes generated from scratch of the sample image from last week. See figure \ref{fig:ex1} and \ref{fig:ex2}:
 \begin{figure}
 	\includegraphics[width=\linewidth]{ex1.pdf}
@@ -131,7 +133,41 @@ First we look at the meshes generated from scratch of the sample image from last
 	\caption{Second attempt at generating a mesh. Looks even worse}
 	\label{fig:ex2}
 \end{figure}
+Both meshes are terrible. The majority of triangles fall into the first bin of the quality measures. If we instead use the \texttt{Triangle} package we get the result seen in figure \ref{fig:ex5}
+\begin{figure}
+	\includegraphics[width=\linewidth]{ex5.pdf}
+	\caption{Creating a mesh from the sample image, there are 100 points along the border, and a max triangle area of 100 pixels}
+	\label{fig:ex5}
+\end{figure}
+If we instead use the sample image from this week, we get the results seen in figures \ref{fig:ex4} and \ref{fig:ex3}. Again \texttt{Triangle} provides a much better mesh, especially compared to the ones created from scratch.
+\begin{figure}
+	\includegraphics[width=\linewidth]{ex4.pdf}
+	\caption{Creating a mesh with \texttt{Triangle}, from this weeks sample image. 200 vertices around the border, max area of 50.}
+	\label{fig:ex4}
+\end{figure}
 
-Trying the same
+\begin{figure}
+	\includegraphics[width=\linewidth]{ex3.pdf}
+	\caption{This weeks sample image, mesh created from scratch, 1000 vertices.}
+	\label{fig:ex3}
+\end{figure}
+Lastly we look at an image with 3 separate geometries, with results in figures \ref{fig:ex7} and \ref{fig:ex6}.
+\begin{figure}
+	\includegraphics[width=\linewidth]{ex7.pdf}
+	\caption{Mesh from scratch, for image with 3 separate geometries. 1000 vertices}
+	\label{fig:ex7}
+\end{figure}
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{ex6.pdf}
+	\caption{Mesh from \texttt{Triangle}, for image with 3 separate geometries. 100 points per contour, 100 max area}
+	\label{fig:ex6}
+\end{figure}
+Note the drop in quality for the mesh generated from \texttt{Triangle}. This is due to the chosen parameters (100 points per contour). This fits fine for the larger geometries, but for the small rectangle, it is far too many, leading to a large number of triangles with far too shallow a minimum angle. Expanding the code to be able to handle different numbers of vertices per contour would alleviate the problem.
+
+In conclusion we see that with the current implemented algorithm, the meshes generated from scratch are no where near an acceptable level of quality, whilst the meshes generated from \texttt{Triangle} perform much better. 
+
+It is also worth noting the difference in distributions for the two quality measures. The minimum angle measure tends to have a much wider peak, at a lower value than that for the aspect ratio measure.
+
 
 \end{document}
