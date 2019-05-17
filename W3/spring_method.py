@@ -313,6 +313,7 @@ def read_from_triangle(name='example.1'):
     x, y = vertices.T
     return x, y, simplices
 
+
 def read_ele(name='example.1.ele'):
     df = pd.read_table(name, header=1, delimiter=r'\s+', comment='#')
     rows_with_nan = df.isnull().any(axis=1)
@@ -333,6 +334,26 @@ def read_node(name='example.1.node'):
     return vertices
 
 
+def get_contour(name='example.bmp'):
+    Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
+    fig, ax = plt.subplots()
+    contour = ax.contour(Gx, Gy, sdf, levels=0)
+    contour_sets = contourplot.collections
+    print(contour_sets.shape)
+
+
+def calc_area_contour(contourplot, level_n=0):
+    contours = contourplot.collections[level_n].get_paths()
+    area = 0
+    for cont in contours:
+        vertices = cont.vertices
+        x, y = vertices.T
+        area += np.abs(0.5*np.sum(y[:-1]*np.diff(x) - x[:-1]*np.diff(y)))
+    return area
+
+
+#%%
+get_contour()
 
 #%% project particles
 x, y, simplices = read_from_triangle()
