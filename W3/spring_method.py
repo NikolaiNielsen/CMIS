@@ -175,26 +175,74 @@ def update_positions(simplices, x, y, tau=0.5):
     x_new, y_new = new_pos.T
     return x_new, y_new
 
+
+def calc_side_lengths(triangles):
+    """
+    Calculate side lengths for a triangle. Outputs ascending side lengths.
+
+    Inputs:
+    triangles - (n, 3, 2) - 1st dimension is triangle number, 2nd dimension is
+                            vertex number, 3rd dimension is coordinate
+
+    outputs:
+    ell - (n, 3) - sidelengths of triangle. Ascending order
+                   (l_min, l_med, l_max)
+    """
+    pass
+
+
+def calc_area_of_triangle(l):
+    """
+    Calculate area of triangle
+
+    Inputs:
+    l - (3,) / (n, 3). lengths of triangle sides
+
+    outputs:
+    A - float. Area of triangle
+    """
+    l = np.atleast_2d(l)
+    s = np.sum(l, axis=1) / 2
+    s = np.atleast_2d(s).T
+    coefs = s-l
+    print(coefs)
+    A = np.sqrt(s.T*np.product(coefs, axis=1))
+    return np.squeeze(A)
+
+
+def calc_min_angle(x, y):
+    """
+    Calculate minimum angle of the triangle
+
+    Inputs:
+    x - (3,). x-positions for each vertex
+    y - (3,). y-positions for each vertex
+
+    outputs:
+    theta - float. Minimum angle
+    """
+    pass
+
+
 #%% project particles
 Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 
-X, Y = push_fully_inside(X, Y, sdf_spline)
-points = np.array((X, Y)).T
-T = Delaunay(points)
-X_new, Y_new = update_positions(T.simplices, X, Y)
-X_new, Y_new = push_fully_inside(X_new, Y_new, sdf_spline)
-points = np.array((X_new, Y_new)).T
-T = Delaunay(points)
+# X, Y = push_fully_inside(X, Y, sdf_spline)
+# points = np.array((X, Y)).T
+# T = Delaunay(points)
+# X_new, Y_new = update_positions(T.simplices, X, Y)
+# X_new, Y_new = push_fully_inside(X_new, Y_new, sdf_spline)
+# points = np.array((X_new, Y_new)).T
+# T = Delaunay(points)
 
 
 
-fig, ax = plt.subplots()
-ax.imshow(im, cmap='Greys_r')
-ax.triplot(X_new, Y_new, T.simplices, color='b')
-ax.scatter(X, Y, color='r', s=5)
-ax.scatter(X_new, Y_new, color='b', s=5)
-plt.show()
-
+# fig, ax = plt.subplots()
+# ax.imshow(im, cmap='Greys_r')
+# ax.triplot(X_new, Y_new, T.simplices, color='b')
+# ax.scatter(X, Y, color='r', s=5)
+# ax.scatter(X_new, Y_new, color='b', s=5)
+# plt.show()
 
 #%%
 # a = np.array(((1,1),(2,4),(5,2)))
