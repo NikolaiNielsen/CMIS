@@ -335,7 +335,7 @@ def read_node(name='example.1.node'):
 
 
 def get_contour(name='example.bmp', outfile='example.poly', N=100):
-    Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
+    Gx, Gy, sdf, _, _, _, _ = import_data(name)
     fig, ax = plt.subplots()
     contour = ax.contour(Gx, Gy, sdf, levels=0)
     contour_sets = contour.collections
@@ -365,7 +365,7 @@ def get_contour(name='example.bmp', outfile='example.poly', N=100):
             xp = np.arange(x.size)
             x_new = np.interp(np.linspace(0, x.size, N), xp, x)
             y_new = np.interp(np.linspace(0, x.size, N), xp, y)
-            for n in range(x.size):
+            for n in range(N):
                 f.write(f'{vert_num} {x_new[n]} {y_new[n]} {seg_num}\n')
                 vert_num += 1
             seg_num += 1
@@ -373,8 +373,7 @@ def get_contour(name='example.bmp', outfile='example.poly', N=100):
         vert_num, seg_num = 1, 1
         f.write(f'{N_segments} 1\n')
         for i in contours:
-            x, y = i.T
-            for n in range(x.size):
+            for n in range(N):
                 f.write(f'{vert_num} {vert_num} {vert_num+1} {seg_num}\n')
                 vert_num += 1
             seg_num += 1
@@ -382,10 +381,26 @@ def get_contour(name='example.bmp', outfile='example.poly', N=100):
         f.write('0\n')
 
 
+def ex3():
+    x, y, simplices = read_from_triangle('EG_200.1')
+    Gx, Gy, sdf, X, Y, im, sdf_spline = import_data('EG_WEB_logo.jpg',
+                                                    invert=True)
+    fig, (ax1, ax2) = plt.subplots(figsize=(8,4), ncols=2)
+    ax1.imshow(im, cmap='Greys_r')
+    ax1.triplot(x, y, simplices, color='b')
+    ax1.scatter(x, y, color='b', s=5)
+    # xborder = 35
+    # yborder = 50
+    # ax1.set_xlim(xborder, im.shape[0]-1-xborder)
+    # ax1.set_ylim(yborder, im.shape[1]-1-yborder)
 
-#%%
-get_contour()
+    ax2 = plot_quality(simplices, x, y, ax=ax2)
+    fig.suptitle("$N_{perim} = 200, A_{max} = 50$")
+    fig.tight_layout()
+    fig.savefig('ex3.pdf')
 
+
+ex3()
 #%% project particles
 # x, y, simplices = read_from_triangle()
 # Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()

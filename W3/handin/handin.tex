@@ -77,7 +77,7 @@ The last step in the algorithm is to stop when  ``satisfied''. The algorithm det
 
 As such, the easiest way to terminate the algorithm is to just stop after some fixed number of iterations, which is the method we here employ.
 
-Problems with this algorithm occurs, however. We see a ``clumping'' of vertices after a low number of iterations, leading to neighbourhoods of high vertex density scattered across the geometry (see figure \textbf{REF} for an example).
+Problems with this algorithm occurs, however. We see a ``clumping'' of vertices after a low number of iterations, leading to neighbourhoods of high vertex density scattered across the geometry (see figure \ref{fig:ex1} for an example).
 
 To combat this I give artificial mass to the different vertices, when calculating the centre of mass. I employ a linear scale with the nearest point ($ \V{p} $ itself) having a mass of unity, and the farthest point having a mass of $ m_{\max} $. The formula for this is
 \begin{equation}\label{key}
@@ -89,7 +89,7 @@ And the centre of mass formula becomes
 \end{equation}
 where $ M $ is the total mass of all vertices in the neighbourhood.
 
-Creating a mesh with the same seed as in figure \textbf{REF}, but with $ m_{\max} = 10 $, which is still not ideal. In fact, it looks worse. A look at their quality measure histograms also reveals as much - the vast majority of triangles are in the first bin for both quality measures.
+Creating a mesh with the same seed as in figure \ref{fig:ex2}, but with $ m_{\max} = 10 $, which is still not ideal. In fact, it looks worse. A look at their quality measure histograms also reveals as much - the vast majority of triangles are in the first bin for both quality measures.
 
 I don't know if I will have time for this next refinement, but my next attempt would be to separate the border of the geometry from the interior:
 
@@ -101,10 +101,11 @@ In step 4 only update the vertices on the interior of the geometry, but let the 
 
 
 \section{Generating meshes with the Triangle package}
-For externally generated meshes, we use the \texttt{Triangle} package, created by J. R. Shewchuk (\url{https://www.cs.cmu.edu/~quake/triangle.html}), in the form implemented in \texttt{MeshPy} (\url{https://documen.tician.de/meshpy/}). To generate meshes we first generate the geometry with the built in geometry tools of \texttt{MeshPy}. This is a laborious, manual process, which I hope to be able to automate (at least for simple binary pictures) by generating a \texttt{.poly} (see the \texttt{Triangle} homepage for an explanation of the file format) file for \texttt{Triangle} to load.
+For externally generated meshes, we use the \texttt{Triangle} package, created by J. R. Shewchuk (\url{https://www.cs.cmu.edu/~quake/triangle.html}). To generate meshes we first have to specify the geometry. This we have automated (at least for simple binary) by generating a \texttt{.poly} (see the \texttt{Triangle} homepage for an explanation of the file format) file for \texttt{Triangle} to load.
 
-The process would be something like generating the border of the geometry from the 0-contour of $ \phi $, and writing this to a file in the correct format, specifying vertex and segment numbers. One could even specify the border vertex density by interpolation similarly to the way it is done in the preceding section.
+The process works by generating the border of the geometry from the 0-contour of $ \phi $, and writing this to a file in the correct format, specifying vertex and segment numbers. To control the density of vertices on the edge of the geometry we perform a linear interpolation as described in the preceding section.
 
+Then we use the command line interface of \texttt{Triangle}, with appropriate arguments to create a \texttt{.node} and \texttt{.ele} file. The first contains a list of vertices, and the second a list of triangles. This can then be imported into python for analysis.
 
 
 
@@ -118,4 +119,19 @@ In particular we use the minimum angle (in radians) measure and the RMS aspect r
 These quality measures are calculated for each triangle in the mesh, and the results are analysed to measure the quality. If we have but one triangle with a quality measure value of 0 we discard the mesh as one of low quality, even if several triangles have a quality measure value of 1. In general we want a large spike of quality measure values (for both measures) as close to 1 as possible. To analyse this we plot the quality measures for each mesh in a histogram.
 
 \section{Experiments}
+First we look at the meshes generated from scratch of the sample image from last week. See figure \ref{fig:ex1} and \ref{fig:ex2}:
+\begin{figure}
+	\includegraphics[width=\linewidth]{ex1.pdf}
+	\caption{First attempt at generating a mesh. It went poorly}
+	\label{fig:ex1}
+\end{figure}
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{ex2.pdf}
+	\caption{Second attempt at generating a mesh. Looks even worse}
+	\label{fig:ex2}
+\end{figure}
+
+Trying the same
+
 \end{document}
