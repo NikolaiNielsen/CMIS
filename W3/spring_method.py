@@ -15,8 +15,9 @@ import quality_measures as qa
 import useful_functions as uf
 
 
-def import_data(name='example.bmp', Nverts=500):
-    sdf, im = uf.grey_to_sdf(name, ghosts=False)
+def import_data(name='example.bmp', Nverts=500, threshold=200, invert=False):
+    sdf, im = uf.grey_to_sdf(name, ghosts=False, threshold=threshold,
+                             invert=invert)
     Ny, Nx = sdf.shape
     border = 0.5
     X = np.random.uniform(border, Nx-1-border, Nverts)
@@ -177,7 +178,8 @@ def update_positions(simplices, x, y, tau=0.5):
 
 
 #%% project particles
-Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
+Gx, Gy, sdf, X, Y, im, sdf_spline = import_data(name='EG_WEB_logo.jpg',
+                                                invert=True)
 
 # X, Y = push_fully_inside(X, Y, sdf_spline)
 # points = np.array((X, Y)).T
@@ -189,12 +191,12 @@ Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 
 
 
-# fig, ax = plt.subplots()
-# ax.imshow(im, cmap='Greys_r')
+fig, ax = plt.subplots()
+ax.imshow(im, cmap='Greys_r')
 # ax.triplot(X_new, Y_new, T.simplices, color='b')
-# ax.scatter(X, Y, color='r', s=5)
+ax.scatter(X, Y, color='r', s=5)
 # ax.scatter(X_new, Y_new, color='b', s=5)
-# plt.show()
+plt.show()
 
 #%%
 # a = np.array(((1,1),(2,4),(5,2)))
