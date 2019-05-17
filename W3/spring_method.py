@@ -9,6 +9,7 @@ import sys
 from mpl_toolkits.mplot3d import Axes3D
 from progress.bar import Bar
 import timeit
+import pandas as pd
 from functools import partial as part
 sys.path.append('../')
 import quality_measures as qa
@@ -101,14 +102,13 @@ def all_triangles(simplices, x, y):
     return verts
 
 
-def discard_outside_triangles(simplices, x, y, sdf_spline):
+def discard_outside_triangles(simplices, x, y, sdf_spline, N_points=10):
     """
     runs over the list of triangles, and figures out whether they are outside
     or inside the object
     """
     verts = all_triangles(simplices, x, y)
     dims = verts.shape
-    N_points = 20
     triangle_points = np.zeros((dims[0], N_points, 2))
     triangles_inside = np.zeros(dims[0])
     d_threshold = 3
@@ -136,7 +136,7 @@ def discard_outside_triangles(simplices, x, y, sdf_spline):
     return simplices[triangles_to_keep], simplices[~ triangles_to_keep]
         
 
-def find_all_neighbours(simplices, n):
+def find_all_neighbours(simplices, n, include_self=False):
     """
     Finds all neighbouring vertices to the n'th vertex
     """
@@ -145,24 +145,39 @@ def find_all_neighbours(simplices, n):
     neighbour_mask = np.sum(neighbours, axis=1).astype(bool)
     neighbouring_simplices = simplices[neighbour_mask]
     unique_verts = np.unique(neighbouring_simplices).flatten()
-    unique_verts = unique_verts[unique_verts != n]
+    if not include_self:
+        unique_verts = unique_verts[unique_verts != n]
     return unique_verts
 
 
-def calc_com(vertices, x, y):
+def calc_com(vertices, x, y, n, m_max=5):
     """
     Calculates the center of mass (with masses assumed equal), for the input
     vertices
     """
+    x_c = x[n]
+    y_c = y[n]
+
+
     N = vertices.size
     x_verts = x[vertices]
     y_verts = y[vertices]
-    x_com = np.sum(x_verts)/N
-    y_com = np.sum(y_verts)/N
+
+    x_dist = x_verts - x_c
+    y_dist = y_verts - y_c
+    r = np.sqrt(x_dist**2 + y_dist**2)
+    r_max = np.amax(r)
+    r_min = np.amin(r)
+    dy = m_max - 1
+    dx = r_max - r_min
+    m = dy/dx * (r - r_min) + 1
+
+    x_com = np.sum(m * x_verts)/np.sum(m)
+    y_com = np.sum(m * y_verts)/np.sum(m)
     return np.array((x_com, y_com))
 
 
-def update_positions(simplices, x, y, tau=0.5):
+def update_positions(simplices, x, y, tau=0.5, include_self=False, m_max=5):
     # first we generate the list of vertices:
     N = x.size
     vertices = np.arange(N)
@@ -170,10 +185,10 @@ def update_positions(simplices, x, y, tau=0.5):
     com_positions = np.zeros(positions.shape)
     mask = np.zeros(N)
     for i in vertices:
-        neighbors = find_all_neighbours(simplices, i)
+        neighbors = find_all_neighbours(simplices, i, include_self)
         mask[i] = neighbors.size
         if mask[i]:
-            com_positions[i, :] = calc_com(neighbors, x, y)
+            com_positions[i, :] = calc_com(neighbors, x, y, i, m_max)
     mask = mask.astype(bool)
     outside = np.sum(mask == False)
     new_pos = positions - tau * (com_positions - positions)
@@ -182,8 +197,9 @@ def update_positions(simplices, x, y, tau=0.5):
     return x_new, y_new
 
 
-def create_mesh(name, N_verts=500, threshold=200,
-                invert=False, N_iter=10, N_tries=3, tau=0.3):
+def create_mesh(name, N_verts=500, threshold=200, include_self=False,
+                invert=False, N_iter=10, N_tries=3, tau=0.3, N_points=10,
+                m_max=5):
     """
     Creates a mesh of a given image. 
     """
@@ -194,46 +210,136 @@ def create_mesh(name, N_verts=500, threshold=200,
     points = np.array((X, Y)).T
     T = Delaunay(points)
     simplices = T.simplices
-    simplices, _ = discard_outside_triangles(simplices, X, Y, sdf_spline)
+    # print(simplices.shape)
+    simplices, _ = discard_outside_triangles(simplices, X, Y, sdf_spline,
+                                             N_points)
     for i in range(N_iter):
-        X, Y = update_positions(simplices, X, Y, tau=tau)
+        # print(simplices.shape)
+        X, Y = update_positions(simplices, X, Y, tau=tau,
+                                include_self=include_self, m_max=m_max)
         X, Y = push_fully_inside(X, Y, sdf_spline, max_tries=N_tries)
         points = np.array((X, Y)).T
         simplices = Delaunay(points).simplices
-        simplices, _ = discard_outside_triangles(simplices, X, Y, sdf_spline)
+        simplices, _ = discard_outside_triangles(simplices, X, Y, sdf_spline,
+                                                 N_points)
+    # print(simplices.shape)
     return X, Y, simplices, im
 
 
-#%% project particles
-X, Y, simplices, im = create_mesh('example.bmp', N_verts=500, N_iter=10)
-# Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
-# v = np.array(((50,70),(200,10),(200,150)))
-# np.set_printoptions(threshold=np.inf)
+def calc_quality(simplices, x, y):
+    """
+    A function to calculate the quality of the mesh, based on two quality
+    measures
+    """
+    triangles = all_triangles(simplices, x, y)
+    l = qa.calc_side_lengths(triangles)
+    A = qa.calc_area_of_triangle(l)
+    Q1 = qa.calc_min_angle_norm(A, l)
+    Q2 = qa.calc_aspect_ratio_norm(A, l)
+    return Q1, Q2
 
-# points = gen_points_in_triangle(v, N=2000)
-# d = sdf_spline.ev(points[:,1], points[:,0])
-# inside = d <= 0
+
+def ex1():
+    np.random.seed(42)
+    X, Y, simplices, im = create_mesh('example.bmp', N_verts=500, N_iter=15,
+                                      include_self=True, N_points=10, m_max=1)
+
+    fig, (ax1, ax2) = plt.subplots(figsize=(9,3.2), ncols=2)
+    ax1.imshow(im, cmap='Greys_r')
+    ax1.triplot(X, Y, simplices, color='b')
+    ax1.scatter(X, Y, color='b', s=5)
+    fig.suptitle("$N_{vertices} = 500, N_{iterations} = 15, N_{points} = 10$")
+    xborder = 35
+    yborder = 50
+    ax1.set_xlim(xborder, im.shape[0]-1-xborder)
+    ax1.set_ylim(yborder, im.shape[1]-1-yborder)
+
+    ax2 = plot_quality(simplices, X, Y, ax=ax2)
+    fig.tight_layout()
+    fig.savefig('ex1.pdf')
+
+
+def ex2():
+    np.random.seed(42)
+    X, Y, simplices, im = create_mesh('example.bmp', N_verts=500, N_iter=15,
+                                      include_self=True, N_points=10, m_max=10)
+
+    fig, (ax1, ax2) = plt.subplots(figsize=(9, 3.2), ncols=2)
+    ax1.imshow(im, cmap='Greys_r')
+    ax1.triplot(X, Y, simplices, color='b')
+    ax1.scatter(X, Y, color='b', s=5)
+    fig.suptitle("$N_{vertices} = 500, N_{iterations} = 15, N_{points} = 10, m_{max}=10$")
+    xborder = 35
+    yborder = 50
+    ax1.set_xlim(xborder, im.shape[0]-1-xborder)
+    ax1.set_ylim(yborder, im.shape[1]-1-yborder)
+
+    ax2 = plot_quality(simplices, X, Y, ax=ax2)
+    fig.tight_layout()
+    fig.savefig('ex2.pdf')
+
+
+def plot_quality(simplices, x, y, N_bins=20, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+        return_fig = True
+    else:
+        return_fig = False
+    Q1, Q2 = calc_quality(simplices, x, y)
+    ax.hist(Q1, N_bins, histtype='step', label='Q1')
+    ax.hist(Q2, N_bins, histtype='step', label='Q2')
+    ax.legend()
+    if return_fig:
+        return fig, ax
+    else:
+        return ax
+
+
+def read_poly(name='example.poly'):
+    df = pd.read_table(name, header=None, delimiter=r'\s+', comment='#')
+    rows_with_nan = df.isnull().any(axis=1)
+    id_rows = np.arange(rows_with_nan.size)
+    id_rows = id_rows[rows_with_nan]
+    # print(id_rows)
+    vertices = df.values[1:id_rows[0], 1:3]
+    segments = df.values[id_rows[0]+1:id_rows[1], 1:3]
+
+
+def read_from_triangle(name='example.1'):
+    ele_file = name + '.ele'
+    node_file = name + '.node'
+    simplices = read_ele(ele_file)
+    vertices = read_node(node_file)
+    x, y = vertices.T
+    return x, y, simplices
+
+def read_ele(name='example.1.ele'):
+    df = pd.read_table(name, header=1, delimiter=r'\s+', comment='#')
+    rows_with_nan = df.isnull().any(axis=1)
+    id_rows = np.arange(rows_with_nan.size)
+    id_rows = id_rows[rows_with_nan]
+    # print(id_rows)
+    simplices = df.values[:, 1:]
+    return simplices - 1
+
+
+def read_node(name='example.1.node'):
+    df = pd.read_table(name, header=None, delimiter=r'\s+', comment='#')
+    rows_with_nan = df.isnull().any(axis=1)
+    id_rows = np.arange(rows_with_nan.size)
+    id_rows = id_rows[rows_with_nan]
+    # print(id_rows)
+    vertices = df.values[1:, 1:3]
+    return vertices
+
+
+
+#%% project particles
+x, y, simplices = read_from_triangle()
+Gx, Gy, sdf, X, Y, im, sdf_spline = import_data()
 
 fig, ax = plt.subplots()
 ax.imshow(im, cmap='Greys_r')
-ax.triplot(X, Y, simplices, color='b')
-ax.scatter(X, Y, color='b', s=5)
-# ax.scatter(v[:,0], v[:,1])
-# ax.scatter(points[inside,0], points[inside,1], s=5, color='b')
-# ax.scatter(points[~inside,0], points[~inside,1], s=5, color='r')
-
+ax.triplot(x, y, simplices)
+ax.scatter(x,y)
 plt.show()
-
-
-
-#%%
-# a = np.array(((1,1),(2,4),(5,2)))
-# points = gen_points_in_triangle(a, N=10)
-# x, y = points
-# fig, ax = plt.subplots()
-# # ax.plot(a[[0,1],0], a[[0,1],1], 'b')
-# # ax.plot(a[[0,2],0], a[[0,2],1], 'b')
-# # ax.plot(a[[1,2],0], a[[1,2],1], 'b')
-# # ax.scatter(a[:,0], a[:,1], s=36)
-# ax.scatter(x,y, s=1)
-# plt.show()
