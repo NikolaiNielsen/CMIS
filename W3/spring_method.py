@@ -198,7 +198,6 @@ def calc_side_lengths(triangles):
     return np.sort(lengths, axis=1)
 
 
-
 def calc_area_of_triangle(l):
     """
     Calculate area of triangle
@@ -218,18 +217,41 @@ def calc_area_of_triangle(l):
     return np.squeeze(A)
 
 
-def calc_min_angle(x, y):
+def calc_min_angle_norm(A, l):
     """
-    Calculate minimum angle of the triangle
+    Calculate the normalized minimum angle of the triangle:
+    theta_min = (3/pi) * arcsin(2A/(l_max*l_med))
 
     Inputs:
-    x - (3,). x-positions for each vertex
-    y - (3,). y-positions for each vertex
+    A - (n,)   - Area of each triangle
+    l - (n, 3) - length of each triangle, in ascending order
 
     outputs:
-    theta - float. Minimum angle
+    theta - (n,) - Minimum angle
     """
-    pass
+    l = np.atleast_2d(l)
+    l_used = l[:,1:]
+    theta = (3/np.pi) * np.arcsin(2*A/np.product(l_used, axis=1))
+    return theta
+    
+
+
+def calc_aspect_ratio_norm(A, l):
+    """
+    Calculate the normalized aspect ratio of the triangles:
+    r = 4*sqrt(3)*A/sum(l**2)
+
+    Inputs:
+    A - (n,)   - Area of each triangle
+    l - (n, 3) - length of each triangle, in ascending order
+
+    outputs:
+    theta - (n,) - Minimum angle
+    """
+    l = np.atleast_2d(l)
+    r = 4*np.sqrt(3)*A/np.sum(l**2, axis=1)
+    return r
+
 
 
 #%% project particles
