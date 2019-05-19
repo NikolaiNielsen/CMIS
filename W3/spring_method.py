@@ -294,6 +294,41 @@ def read_node(name='example.1.node'):
     return vertices
 
 
+def write_to_poly(vert_list, holes=[], outfile='example.poly'):
+    N_contours = len(vert_list)
+    N_verts = 0
+    for i in N_contours:
+        N_verts += i.shape[0]
+    
+    N_segments = N_verts
+
+    with open(outfile, 'w') as f:
+        vert_num = 1
+        seg_num = 1
+        f.write(f'{N_verts} 2 0 1\n')
+        for contour in vert_list:
+            x, y = contour.T
+            N = x.size
+
+            for n in range(N):
+                f.write(f'{vert_num} {x[n]} {y[n]} {seg_num}\n')
+                vert_num += 1
+            seg_num += 1
+
+        vert_num, seg_num = 1, 1
+        f.write(f'{N_segments} 1\n')
+        for i in vert_list:
+            for n in range(N):
+                f.write(f'{vert_num} {vert_num} {vert_num+1} {seg_num}\n')
+                vert_num += 1
+            seg_num += 1
+
+        N_holes = len(holes)
+        f.write('0\n')
+        for n in range(N_holes):
+            f.write(f'{n+1} {holes[n,0]} {holes[n,0]}')
+
+
 def get_contour(name='example.bmp', outfile='example.poly', N=100):
     Gx, Gy, sdf, _, _, _, _ = import_data(name)
     fig, ax = plt.subplots()
