@@ -38,5 +38,21 @@ K[[0, -1],:] = 0
 K[[0, -1], [0, -1]] = 1
 f[[0, -1]] = ylims
 
-print(f)
-print(K)
+
+# Inspect matrix eigenvalues
+def inspect_matrix(m):
+    eigs, _ = np.linalg.eig(m)
+    rank = np.linalg.matrix_rank(m)
+    fig, ax = plt.subplots()
+    ax.scatter(np.arange(eigs.size), eigs)
+    ax.set_xlabel('Matrix eigenvalue index')
+    ax.set_ylabel('Matrix Eigenvalue')
+    ax.set_title(f'Matrix Rank: {rank}, Size: {K.shape}')
+    fig.tight_layout()
+    return fig, ax
+
+# fig, ax = inspect_matrix(K)
+y = np.linalg.solve(K, f)
+fig, ax = plt.subplots()
+ax.plot(x, y)
+plt.show()
