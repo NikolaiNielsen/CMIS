@@ -421,10 +421,3 @@ def generate_and_import_mesh(contour_list, hole_list=[], save_files=False,
 
     return x, y, simplices
 
-
-contours, holes = create_square_with_hole()
-x, y, simplices = generate_and_import_mesh(contours, holes)
-fig, ax = plt.subplots()
-ax.triplot(x, y, simplices)
-ax.scatter(x, y)
-plt.show()
