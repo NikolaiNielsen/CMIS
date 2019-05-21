@@ -300,35 +300,38 @@ def write_to_poly(vert_list, holes=[], outfile='example.poly'):
     """
 
     # First we get the relevant number of vertices, contours and segments
-    N_contours = len(vert_list)
+    vert_ids = []
     N_verts = 0
-    for i in N_contours:
-        N_verts += i.shape[0]
+    for i in vert_list:
+        start_vert = N_verts + 1
+        current_N = i.shape[0]
+        current_vert_ids = list(range(start_vert, current_N + start_vert))
+        current_vert_ids.append(start_vert)
+        vert_ids.append(current_vert_ids)
+        N_verts += current_N
     N_segments = N_verts
 
     with open(outfile, 'w') as f:
         # Add a running count of vertices and boundary markers
-        vert_num = 1
         bound_num = 1
         # Write first line: N_verts, dimension, N_attributes, boundary markers?
         f.write(f'{N_verts} 2 0 1\n')
 
         # Write every vertex 
-        for contour in vert_list:
+        for contour, ids in zip(vert_list, vert_ids):
             x, y = contour.T
             N = x.size
             for n in range(N):
-                f.write(f'{vert_num} {x[n]} {y[n]} {bound_num}\n')
-                vert_num += 1
+                f.write(f'{ids[n]} {x[n]} {y[n]} {bound_num}\n')
             bound_num += 1
 
         # write every segment
-        vert_num, seg_num = 1, 1
+        seg_num = 1
         f.write(f'{N_segments} 1\n')
-        for i in vert_list:
-            for n in range(N):
-                f.write(f'{vert_num} {vert_num} {vert_num+1} {seg_num}\n')
-                vert_num += 1
+        for ids in vert_ids:
+            N = len(ids)
+            for n in range(N-1):
+                f.write(f'{ids[n]} {ids[n]} {ids[n+1]} {seg_num}\n')
             seg_num += 1
 
         # Write holes
@@ -363,3 +366,28 @@ def get_contour_from_pic(name='example.bmp', N=100):
         new_contours.append(vertices)
 
     return new_contours
+
+
+def create_square_with_hole(square_lims, r, N_square, N_circ):
+    N_square = np.floor(N_square).astype(int)
+    theta = np.linspace(0, 2*np.pi, N_circ + 1)[:-1]
+    x1 = r*np.cos(theta)
+    y1 = r*np.sin(theta)
+
+    contours = []
+    contours.append(np.array([x1, y1]).T)
+
+    N_square = 30
+    x = np.linspace(*square_lims, N_square + 1)[:-1]
+    y = square_lims[1]*np.ones(x.shape)
+
+    top = np.array((x, y)).T
+    right = np.array((y, -x)).T
+    bottom = np.array((-x, -y)).T
+    left = np.array((-y, x)).T
+    n1 = np.vstack((top, right, bottom, left))
+    contours.append(n1)
+
+    holes = np.atleast_2d(np.array((0,0)))
+
+    write_to_poly(contours, holes, 'square_peg.poly')
