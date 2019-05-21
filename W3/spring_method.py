@@ -338,7 +338,7 @@ def write_to_poly(vert_list, holes=[], outfile='example.poly'):
             f.write(f'{n+1} {holes[n, 0]} {holes[n, 1]}')
 
 
-def get_contour(name='example.bmp', outfile='example.poly', N=100):
+def get_contour_from_pic(name='example.bmp', N=100):
     Gx, Gy, sdf, _, _, _, _ = import_data(name)
     fig, ax = plt.subplots()
     contour = ax.contour(Gx, Gy, sdf, levels=0)
@@ -352,34 +352,14 @@ def get_contour(name='example.bmp', outfile='example.poly', N=100):
         for cont in i:
             contours.append(cont.vertices)
     
-    N_contours = len(contours)
-    N_verts = 0
+    new_contours = []
     for i in contours:
-        N_verts += i.shape[0]
-    N_verts = N_contours * N
+        x, y = i.T
+        
+        xp = np.arange(x.size)
+        x_new = np.interp(np.linspace(0, x.size, N), xp, x)
+        y_new = np.interp(np.linspace(0, x.size, N), xp, y)
+        vertices = np.array((x_new, y_new)).T
+        new_contours.append(vertices)
 
-    N_segments = N_verts
-    with open(outfile, 'w') as f:
-        vert_num = 1
-        seg_num = 1
-        f.write(f'{N_verts} 2 0 1\n')
-        for i in contours:
-            x, y = i.T
-            
-            xp = np.arange(x.size)
-            x_new = np.interp(np.linspace(0, x.size, N), xp, x)
-            y_new = np.interp(np.linspace(0, x.size, N), xp, y)
-            for n in range(N):
-                f.write(f'{vert_num} {x_new[n]} {y_new[n]} {seg_num}\n')
-                vert_num += 1
-            seg_num += 1
-        
-        vert_num, seg_num = 1, 1
-        f.write(f'{N_segments} 1\n')
-        for i in contours:
-            for n in range(N):
-                f.write(f'{vert_num} {vert_num} {vert_num+1} {seg_num}\n')
-                vert_num += 1
-            seg_num += 1
-        
-        f.write('0\n')
+    return new_contours
