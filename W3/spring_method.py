@@ -190,7 +190,7 @@ def update_positions(simplices, x, y, tau=0.5, include_self=False, m_max=5):
         if mask[i]:
             com_positions[i, :] = calc_com(neighbors, x, y, i, m_max)
     mask = mask.astype(bool)
-    outside = np.sum(mask == False)
+    # outside = np.sum(mask == False)
     new_pos = positions - tau * (com_positions - positions)
     x_new, y_new = new_pos[mask,:].T
     # print(outside, x_new.shape)
@@ -295,26 +295,34 @@ def read_node(name='example.1.node'):
 
 
 def write_to_poly(vert_list, holes=[], outfile='example.poly'):
+    """
+    Write a list of vertices to a .poly file, for Triangle to read
+    """
+
+    # First we get the relevant number of vertices, contours and segments
     N_contours = len(vert_list)
     N_verts = 0
     for i in N_contours:
         N_verts += i.shape[0]
-    
     N_segments = N_verts
 
     with open(outfile, 'w') as f:
+        # Add a running count of vertices and boundary markers
         vert_num = 1
-        seg_num = 1
+        bound_num = 1
+        # Write first line: N_verts, dimension, N_attributes, boundary markers?
         f.write(f'{N_verts} 2 0 1\n')
+
+        # Write every vertex 
         for contour in vert_list:
             x, y = contour.T
             N = x.size
-
             for n in range(N):
-                f.write(f'{vert_num} {x[n]} {y[n]} {seg_num}\n')
+                f.write(f'{vert_num} {x[n]} {y[n]} {bound_num}\n')
                 vert_num += 1
-            seg_num += 1
+            bound_num += 1
 
+        # write every segment
         vert_num, seg_num = 1, 1
         f.write(f'{N_segments} 1\n')
         for i in vert_list:
@@ -323,10 +331,11 @@ def write_to_poly(vert_list, holes=[], outfile='example.poly'):
                 vert_num += 1
             seg_num += 1
 
+        # Write holes
         N_holes = len(holes)
-        f.write('0\n')
+        f.write(f'{N_holes}\n')
         for n in range(N_holes):
-            f.write(f'{n+1} {holes[n,0]} {holes[n,0]}')
+            f.write(f'{n+1} {holes[n, 0]} {holes[n, 1]}')
 
 
 def get_contour(name='example.bmp', outfile='example.poly', N=100):
