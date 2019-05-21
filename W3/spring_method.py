@@ -371,7 +371,7 @@ def get_contour_from_pic(name='example.bmp', N=100):
 
 def create_square_with_hole(square_lims=[-100, 100], r=50,
                             N_square=80, N_circ=50,
-                            outfile='square_peg.poly'):
+                            outfile='square_peg'):
     N_square = np.floor(N_square/4).astype(int)
     theta = np.linspace(0, 2*np.pi, N_circ + 1)[:-1]
     x1 = r*np.cos(theta)
@@ -392,7 +392,7 @@ def create_square_with_hole(square_lims=[-100, 100], r=50,
 
     holes = np.atleast_2d(np.array((0,0)))
 
-    write_to_poly(contours, holes, 'square_peg.poly')
+    write_to_poly(contours, holes, f'{outfile}.poly')
 
 
 def call_triangle(polyfile, min_angle=0, max_area=None):
