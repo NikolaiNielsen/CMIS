@@ -395,18 +395,21 @@ def create_square_with_hole(square_lims=[-100, 100], r=50,
     write_to_poly(contours, holes, 'square_peg.poly')
 
 
-def call_triangle(polyfile, min_angle=0, max_area=100):
-    args = f'-pq{min_angle}LDa{max_area}'
+def call_triangle(polyfile, min_angle=0, max_area=None):
+    if max_area is None:
+        args = f'-pq{min_angle}LD'
+    else:
+        args = f'-pq{min_angle}LDa{max_area}'
     cmd = ['triangle', args, polyfile]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     for line in p.stdout:
-        print(line)
+        print(line.decode('utf-8'), end='')
     p.wait()
     print(p.returncode)
 
 
 create_square_with_hole()
-call_triangle('square_peg.poly', min_angle=0)
+call_triangle('square_peg.poly', min_angle=0, max_area=100)
 x, y, simplices = read_from_triangle('square_peg.1')
 fig, ax = plt.subplots()
 ax.triplot(x, y, simplices)
