@@ -10,6 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from progress.bar import Bar
 import timeit
 import pandas as pd
+import subprocess
 from functools import partial as part
 sys.path.append('../')
 import quality_measures as qa
@@ -368,8 +369,10 @@ def get_contour_from_pic(name='example.bmp', N=100):
     return new_contours
 
 
-def create_square_with_hole(square_lims, r, N_square, N_circ):
-    N_square = np.floor(N_square).astype(int)
+def create_square_with_hole(square_lims=[-100, 100], r=50,
+                            N_square=80, N_circ=50,
+                            outfile='square_peg.poly'):
+    N_square = np.floor(N_square/4).astype(int)
     theta = np.linspace(0, 2*np.pi, N_circ + 1)[:-1]
     x1 = r*np.cos(theta)
     y1 = r*np.sin(theta)
@@ -377,7 +380,6 @@ def create_square_with_hole(square_lims, r, N_square, N_circ):
     contours = []
     contours.append(np.array([x1, y1]).T)
 
-    N_square = 30
     x = np.linspace(*square_lims, N_square + 1)[:-1]
     y = square_lims[1]*np.ones(x.shape)
 
@@ -391,3 +393,22 @@ def create_square_with_hole(square_lims, r, N_square, N_circ):
     holes = np.atleast_2d(np.array((0,0)))
 
     write_to_poly(contours, holes, 'square_peg.poly')
+
+
+def call_triangle(polyfile, min_angle=0, max_area=100):
+    args = f'-pq{min_angle}LDa{max_area}'
+    cmd = ['triangle', args, polyfile]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    for line in p.stdout:
+        print(line)
+    p.wait()
+    print(p.returncode)
+
+
+create_square_with_hole()
+call_triangle('square_peg.poly', min_angle=0)
+x, y, simplices = read_from_triangle('square_peg.1')
+fig, ax = plt.subplots()
+ax.triplot(x, y, simplices)
+ax.scatter(x, y)
+plt.show()
