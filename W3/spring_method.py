@@ -6,6 +6,7 @@ from scipy.spatial import Delaunay
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import os
 from mpl_toolkits.mplot3d import Axes3D
 from progress.bar import Bar
 import timeit
@@ -141,7 +142,6 @@ def find_all_neighbours(simplices, n, include_self=False):
     """
     Finds all neighbouring vertices to the n'th vertex
     """
-
     neighbours = simplices == n
     neighbour_mask = np.sum(neighbours, axis=1).astype(bool)
     neighbouring_simplices = simplices[neighbour_mask]
@@ -159,8 +159,6 @@ def calc_com(vertices, x, y, n, m_max=5):
     x_c = x[n]
     y_c = y[n]
 
-
-    N = vertices.size
     x_verts = x[vertices]
     y_verts = y[vertices]
 
@@ -254,16 +252,6 @@ def plot_quality(simplices, x, y, N_bins=20, ax=None):
         return fig, ax
     else:
         return ax
-
-
-def read_poly(name='example.poly'):
-    df = pd.read_table(name, header=None, delimiter=r'\s+', comment='#')
-    rows_with_nan = df.isnull().any(axis=1)
-    id_rows = np.arange(rows_with_nan.size)
-    id_rows = id_rows[rows_with_nan]
-    # print(id_rows)
-    vertices = df.values[1:id_rows[0], 1:3]
-    segments = df.values[id_rows[0]+1:id_rows[1], 1:3]
 
 
 def read_from_triangle(name='example.1'):
@@ -392,25 +380,50 @@ def create_square_with_hole(square_lims=[-100, 100], r=50,
 
     holes = np.atleast_2d(np.array((0,0)))
 
-    write_to_poly(contours, holes, f'{outfile}.poly')
+    return contours, holes
 
 
-def call_triangle(polyfile, min_angle=0, max_area=None):
+def call_triangle(polyfile, min_angle=0, max_area=None, print_triangle=True):
     if max_area is None:
         args = f'-pq{min_angle}LD'
     else:
         args = f'-pq{min_angle}LDa{max_area}'
     cmd = ['triangle', args, polyfile]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    for line in p.stdout:
-        print(line.decode('utf-8'), end='')
+    if print_triangle:
+        for line in p.stdout:
+            print(line.decode('utf-8'), end='')
     p.wait()
-    print(p.returncode)
+    if print_triangle:
+        print(p.returncode)
 
 
-create_square_with_hole()
-call_triangle('square_peg.poly', min_angle=0, max_area=100)
-x, y, simplices = read_from_triangle('square_peg.1')
+def generate_and_import_mesh(contour_list, hole_list=[], save_files=False,  
+                             min_angle=0, max_area=None, file_name='tmp',
+                             print_triangle=False):
+    """
+    Function to handle mesh generation with Triangle, along with automatic file
+    cleanup as needed
+    """
+    input_poly_file = f'{file_name}.poly'
+    write_to_poly(contour_list, hole_list, outfile=input_poly_file)
+    call_triangle(input_poly_file, min_angle, max_area, print_triangle)
+    triangle_file = f'{file_name}.1'
+    x, y, simplices = read_from_triangle(triangle_file)
+
+    if not save_files:
+        files_to_delete = [input_poly_file,
+                           *[f'{triangle_file}.{i}' for i in ['poly',
+                                                              'ele',
+                                                              'node']]]
+        for file in files_to_delete:
+            os.remove(file)
+
+    return x, y, simplices
+
+
+contours, holes = create_square_with_hole()
+x, y, simplices = generate_and_import_mesh(contours, holes)
 fig, ax = plt.subplots()
 ax.triplot(x, y, simplices)
 ax.scatter(x, y)
