@@ -1,4 +1,6 @@
-from spring_method import *
+import sys
+sys.path.append('../useful_functions')
+from mesh import *
 
 
 def ex1():

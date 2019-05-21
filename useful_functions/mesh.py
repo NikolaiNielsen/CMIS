@@ -1,21 +1,13 @@
-
-#%%
-from scipy import interpolate, ndimage
-import imageio
-from scipy.spatial import Delaunay
-import numpy as np
-import matplotlib.pyplot as plt
 import sys
 import os
-from mpl_toolkits.mplot3d import Axes3D
-from progress.bar import Bar
-import timeit
-import pandas as pd
 import subprocess
-from functools import partial as part
-sys.path.append('../')
-import quality_measures as qa
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from scipy import interpolate, ndimage
+from scipy.spatial import Delaunay
 import useful_functions as uf
+import quality_measures as qa
 
 
 def import_data(name='example.bmp', Nverts=500, threshold=200, invert=False):
@@ -420,4 +412,3 @@ def generate_and_import_mesh(contour_list, hole_list=[], save_files=False,
             os.remove(file)
 
     return x, y, simplices
-
