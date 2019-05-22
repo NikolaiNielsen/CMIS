@@ -10,7 +10,9 @@ def create_mesh(min_angle=0, max_area=0.1):
     contours = [np.array([[0, 0], [6, 0], [6, 2], [0, 2]])]
     x, y, simplices = mesh.generate_and_import_mesh(contours,
                                                     min_angle=min_angle,
-                                                    max_area=max_area)
+                                                    max_area=max_area,
+                                                    save_files=False,
+                                                    print_triangle=False)
     return x, y, simplices
 
 
@@ -70,6 +72,29 @@ def create_element_matrix(triangles):
     return elements
 
 
-x, y, simplices = create_mesh(0, 0.1)
-triangles = mesh.all_triangles(simplices, x, y)
-elements = create_element_matrix(triangles)
+def get_global_indices(simplices):
+    elements = []
+    for tri in simplices:
+        elements.append(np.meshgrid(tri, tri))
+    return elements
+
+
+def assemble_global_matrix(x, y, simplices):
+    K = np.zeros((x.size, x.size))
+
+    triangles = mesh.all_triangles(simplices, x, y)
+    elements = create_element_matrix(triangles)
+    indices = get_global_indices(simplices)
+    for el, ind in zip(elements, indices):
+        x, y = ind
+        K[x, y] += el
+    return K
+
+
+x, y, simplices = create_mesh(0, None)
+# K = assemble_global_matrix(x, y, simplices)
+# non_zero = np.sum(~(K==0))
+fig, ax = plt.subplots()
+ax.triplot(x, y, simplices)
+ax.scatter(x, y)
+plt.show()
