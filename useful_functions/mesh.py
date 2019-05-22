@@ -35,6 +35,7 @@ def push_points_inside(x, y, sdf_spline):
     y[mask] = y[mask] - ny[mask]
     return x,y
 
+
 def push_fully_inside(x, y, sdf_spline, max_tries=3):
     d = sdf_spline.ev(y, x)
 
@@ -256,12 +257,8 @@ def read_from_triangle(name='example.1'):
 
 
 def read_ele(name='example.1.ele'):
-    df = pd.read_table(name, header=1, delimiter=r'\s+', comment='#')
-    rows_with_nan = df.isnull().any(axis=1)
-    id_rows = np.arange(rows_with_nan.size)
-    id_rows = id_rows[rows_with_nan]
-    # print(id_rows)
-    simplices = df.values[:, 1:]
+    df = pd.read_table(name, header=0, delimiter=r'\s+', comment='#')
+    simplices = df.values
     return simplices - 1
 
 
