@@ -91,10 +91,9 @@ def assemble_global_matrix(x, y, simplices):
     return K
 
 
-x, y, simplices = create_mesh(0, None)
-# K = assemble_global_matrix(x, y, simplices)
+x, y, simplices = create_mesh(0, 0.1)
+K = assemble_global_matrix(x, y, simplices)
 # non_zero = np.sum(~(K==0))
 fig, ax = plt.subplots()
-ax.triplot(x, y, simplices)
-ax.scatter(x, y)
+ax.spy(K)
 plt.show()
