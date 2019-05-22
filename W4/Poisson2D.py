@@ -1,9 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import sys
 sys.path.append('../useful_functions/')
 import useful_functions as uf
 import mesh
+
 
 
 def create_mesh(min_angle=0, max_area=0.1):
@@ -25,19 +27,6 @@ def test_mesh(min_angle=0, max_area=0.1):
     ax2 = mesh.plot_quality(simplices, x, y, ax=ax2)
     fig.tight_layout()
     plt.show()
-
-
-def calc_boundary_value(x, y, a=1, b=2, x0=0, y0=1):
-    return (b-a)/(6) * (x-x0) + y0
-
-
-def get_boundary(x, y):
-    left = x == 0
-    top = y == 2
-    right = x == 6
-    bottom = y == 0
-    boundary = left + top + right + bottom
-    return boundary
 
 
 def calc_areas(triangles):
@@ -91,9 +80,26 @@ def assemble_global_matrix(x, y, simplices):
     return K
 
 
-x, y, simplices = create_mesh(0, 0.1)
-K = assemble_global_matrix(x, y, simplices)
-# non_zero = np.sum(~(K==0))
-fig, ax = plt.subplots()
-ax.spy(K)
+def add_boundary(K, f, x, y, a=1, b=2):
+    left = x == 0
+    right = x == 6
+    border_ind = np.arange(x.size)[left+right]
+    K[border_ind] = 0
+    K[border_ind, border_ind] = 1
+    f[left] = a
+    f[right] = b
+    return K, f
+
+
+def solve_system(min_angle=0, max_area=0.1):
+    x, y, simplices = create_mesh(0, 0.1)
+    f = np.zeros(x.shape)
+    K = assemble_global_matrix(x, y, simplices)
+    K, f = add_boundary(K, f, x, y)
+    u = np.linalg.solve(K, f)
+    return x, y, simplices, u
+
+x, y, simplices, u = solve_system()
+fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+ax.plot_trisurf(x, y, u)
 plt.show()
