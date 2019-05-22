@@ -51,8 +51,4 @@ def inspect_matrix(m):
     fig.tight_layout()
     return fig, ax
 
-# fig, ax = inspect_matrix(K)
 y = np.linalg.solve(K, f)
-fig, ax = plt.subplots()
-ax.plot(x, y)
-plt.show()
