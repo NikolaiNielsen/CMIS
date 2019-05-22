@@ -25,13 +25,22 @@ def test_mesh(min_angle=0, max_area=0.1):
     plt.show()
 
 
+def calc_boundary_value(x, y, a=1, b=2, x0=0, y0=1):
+    return (b-a)/(6) * (x-x0) + y0
+
+
+def get_boundary(x, y):
+    left = x == 0
+    top = y == 2
+    right = x == 6
+    bottom = y == 0
+    boundary = left + top + right + bottom
+    return boundary
+
+
 x, y, simplices = create_mesh(0, 0.1)
-left = x == 0
-top = y == 2
-right = x == 6
-bottom = y == 0
-boundary = left + top + right + bottom
+boundary = get_boundary(x, y)
 fig, ax = plt.subplots()
 ax.scatter(x, y)
-ax.scatter(x[boundary], y[boundary], 'r')
+ax.scatter(x[boundary], y[boundary], color='r')
 plt.show()
