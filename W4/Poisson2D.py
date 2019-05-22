@@ -56,5 +56,20 @@ def calc_areas(triangles):
     area = crosses/2
     return area
 
-x, y, simplices = create_mesh(0, 0.1)
 
+def create_element_matrix(triangles):
+    areas = calc_areas(triangles)
+    diff_vectors = triangles[:, [2, 0, 1]] - triangles[:, [1, 2, 0]]
+    y_coords = diff_vectors[:,:,1]
+    x_coords = diff_vectors[:,:,0]
+    elements = np.zeros((areas.size, 3, 3))
+    for i, (x, y) in enumerate(zip(x_coords, y_coords)):
+        px = np.outer(x, x)
+        py = np.outer(y, y)
+        elements[i, :, :] = (px + py) / (4*areas[i])
+    return elements
+
+
+x, y, simplices = create_mesh(0, 0.1)
+triangles = mesh.all_triangles(simplices, x, y)
+elements = create_element_matrix(triangles)
