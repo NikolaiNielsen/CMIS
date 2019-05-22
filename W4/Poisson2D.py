@@ -24,3 +24,14 @@ def test_mesh(min_angle=0, max_area=0.1):
     fig.tight_layout()
     plt.show()
 
+
+x, y, simplices = create_mesh(0, 0.1)
+left = x == 0
+top = y == 2
+right = x == 6
+bottom = y == 0
+boundary = left + top + right + bottom
+fig, ax = plt.subplots()
+ax.scatter(x, y)
+ax.scatter(x[boundary], y[boundary], 'r')
+plt.show()
