@@ -80,6 +80,15 @@ def assemble_global_matrix(x, y, simplices):
     return K
 
 
+def create_f_vector(x, y, simplices, c=2):
+    triangles = mesh.all_triangles(simplices, x, y)
+    f = np.zeros(x.shape)
+    areas = calc_areas(triangles)
+    for n, simp in enumerate(simplices):
+        f[simp] += -c*areas[n]/3
+    return f
+
+
 def add_boundary(K, f, x, y, a=1, b=2):
     left = x == 0
     right = x == 6
@@ -91,15 +100,27 @@ def add_boundary(K, f, x, y, a=1, b=2):
     return K, f
 
 
-def solve_system(min_angle=0, max_area=0.1):
-    x, y, simplices = create_mesh(0, 0.1)
-    f = np.zeros(x.shape)
+def solve_system(min_angle=30, max_area=0.1, c=2):
+    x, y, simplices = create_mesh(min_angle, max_area)
     K = assemble_global_matrix(x, y, simplices)
+    f = create_f_vector(x, y, simplices, c=c)
     K, f = add_boundary(K, f, x, y)
     u = np.linalg.solve(K, f)
     return x, y, simplices, u
 
+
+def analytical_solution(x, y, a=1, b=2):
+    dy = b-a
+    dx = 6
+    return (dy/dx) * x + a
+
+
+
 x, y, simplices, u = solve_system()
+sol = analytical_solution(x, y)
+res = np.sqrt(np.sum((u-sol)**2))/x.size
+print(res)
+
 fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
-ax.plot_trisurf(x, y, u)
+ax.plot_trisurf(x, y, u, cmap='jet')
 plt.show()
