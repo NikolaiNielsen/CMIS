@@ -112,11 +112,19 @@ def solve_system(min_angle=30, max_area=0.1, c=2):
 def analytical_solution(x, x0=6, a=1, b=2, c=0):
     return (c/2)*x*x - (c*x0*x0 + 2*a - 2*b)*x/(2*x0) + a
 
+
+def calc_res(x, u, x0=6, a=1, b=2, c=0):
+    left = x == 0
+    right = x == x0
+    N_border = np.sum(left + right)
+    sol = analytical_solution(x, x0, a, b, c)
+    res = np.sqrt(np.sum((u-sol)**2))/(x.size-N_border)
+    return res
+
+
 c = 2
 x, y, simplices, u = solve_system(min_angle=30, max_area=0.1, c=c)
-sol = analytical_solution(x, c=c)
-res = np.sqrt(np.sum((u-sol)**2))/x.size
-print(res)
+res = calc_res(x, u)
 
 fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
 ax.plot_trisurf(x, y, u, cmap='jet')
