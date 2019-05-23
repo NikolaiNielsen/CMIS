@@ -30,6 +30,18 @@
 \maketitle
 
 \section{Finite Element Method}
+The essence of the finite element method is to represent the domain as a finite set of elements (hence the name), and compute an approximate solution for each of these elements, adding up to the global solution. The actual elements vary on the dimensionality of the system. Straight-line segments for 1D problems, triangles for 2D and tetrahedra for 3D are the ones we focus on here due to their simplicity, but others can be used as well.
+
+The actual method can be summarised in a couple of steps:
+\begin{enumerate}
+	\item Convert the differential equation to a volume integral
+	\item Define the elements
+	\item Choose a shape and trial function for the elements
+	\item Compute the elementwise integrals
+	\item Assemble the global matrix and source vector
+	\item Apply boundary conditions
+	\item Compute the solution
+\end{enumerate}
 
 
 \end{document}
