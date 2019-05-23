@@ -109,15 +109,12 @@ def solve_system(min_angle=30, max_area=0.1, c=2):
     return x, y, simplices, u
 
 
-def analytical_solution(x, y, a=1, b=2):
-    dy = b-a
-    dx = 6
-    return (dy/dx) * x + a
+def analytical_solution(x, x0=6, a=1, b=2, c=0):
+    return (c/2)*x*x - (c*x0*x0 + 2*a - 2*b)*x/(2*x0) + a
 
-
-
-x, y, simplices, u = solve_system()
-sol = analytical_solution(x, y)
+c = 2
+x, y, simplices, u = solve_system(min_angle=30, max_area=0.1, c=c)
+sol = analytical_solution(x, c=c)
 res = np.sqrt(np.sum((u-sol)**2))/x.size
 print(res)
 
