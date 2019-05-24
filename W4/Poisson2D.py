@@ -125,7 +125,7 @@ def calc_res(x, u, x0=6, a=1, b=2, c=0):
 
 def experiment_1(min_max=0.05, max_max=2, n=50, c=2, min_angle=30):
     max_areas = np.logspace(np.log2(min_max), np.log2(max_max), n, base=2)
-    results = np.zeros((2, n))
+    results = np.zeros(n)
     dof = np.zeros(n)
     n_verts = np.zeros(n)
     qualities = np.zeros((2,n))
@@ -134,40 +134,78 @@ def experiment_1(min_max=0.05, max_max=2, n=50, c=2, min_angle=30):
     for i, max_area in enumerate(max_areas):
         x, y, simplices, u = solve_system(min_angle=min_angle,
                                           max_area=max_area, c=c)
-        _, _, _, (res, _) = fdm(x.size, c=2)
         Q1, Q2 = mesh.calc_quality(simplices, x, y)
         n_verts[i] = x.size
         qualities[0, i] = np.average(Q1)
         qualities[1, i] = np.average(Q2)
         n_zero = (Q1 == 0) + (Q2 == 0)
         n_zeros[i] = np.sum(n_zero)
-        results[0, i], dof[i] = calc_res(x, u, c=c)
-        results[1, i] = res
+        results[i], dof[i] = calc_res(x, u, c=c)
         bar.next()
     bar.finish()
-    fig, ax = plt.subplots(nrows=3)
+    fig, ax = plt.subplots(nrows=3, figsize=(7, 6))
     ax = ax.flatten()
     for a in ax:
         a.set_xscale('log')
-    ax[0].plot(max_areas, results[0], label='FEM')
-    ax[0].plot(max_areas, results[1], label='FDM')
-    ax[0].legend()
-    ax[1].plot(max_areas, dof)
-    ax[1].plot(max_areas, n_verts)
-    ax[2].plot(max_areas, qualities.T)
+        a.set_xlabel('Maximum triangle area')
+    ax[0].plot(max_areas, results, label='FEM')
+    ax[0].set_title(f'Residual as function of maximum triangle area, c={c}')
+    ax[1].plot(max_areas, dof, label='$N_{dof}$')
+    ax[1].plot(max_areas, n_verts, label='$N$')
+    ax[1].legend()
+    ax[1].set_title('Number of vertices and degrees of freedom')
+    ax[2].plot(max_areas, qualities[0], label=r'$\theta_{min}$')
+    ax[2].plot(max_areas, qualities[1], label=r'$A/\ell_{RMS}$')
+    ax[2].set_title('Average Mesh qualities')
+    ax[2].legend(bbox_to_anchor=(1,-0.1))
     fig.tight_layout()
     print(np.sum(n_zeros != 0))
-    plt.show()
+    fig.savefig(f'handin/experiment1c{c}.pdf')
+
+
+def experiment_2(min_max=0.05, max_max=2, n=50, c=0, min_angle=30):
+    max_areas = np.logspace(np.log2(min_max), np.log2(max_max), n, base=2)
+    results = np.zeros(n)
+    dof = np.zeros(n)
+    n_zeros = np.zeros(n)
+    bar = Bar('Solving', max=n)
+    for i, max_area in enumerate(max_areas):
+        x, y, simplices, u = solve_system(min_angle=min_angle,
+                                          max_area=max_area, c=c)
+        results[i], dof[i] = calc_res(x, u, c=c)
+        bar.next()
+    bar.finish()
+    fig, ax = plt.subplots(figsize=(7, 2))
+    ax.set_xscale('log')
+    ax.set_xlabel('Maximum triangle area')
+    ax.plot(max_areas, results, label='FEM')
+    ax.set_title(f'Residual as function of maximum triangle area, c={c}')
+    fig.tight_layout()
+    fig.savefig(f'handin/experiment2c{c}.pdf')
 
 
 def simple_ex():
     c = 2
-    x, y, simplices, u = solve_system(min_angle=30, max_area=0.1, c=c)
-    res, _ = calc_res(x, u)
+    x, y, _, u = solve_system(min_angle=30, max_area=0.1, c=c)
+    res, _ = calc_res(x, u, c=c)
 
-    fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
-    ax.plot_trisurf(x, y, u, cmap='coolwarm')
-    plt.show()
+    # res, _ = calc_res(x, u)
+    X, Y, _, U = solve_system(min_angle=30, max_area=0.1, c=0)
+    res2, _ = calc_res(X, U, c=0)
+    fig, (ax1, ax2) = plt.subplots(figsize=(9,4), ncols=2, subplot_kw=dict(projection='3d'))
+    ax1.plot_trisurf(X, Y, U, cmap='coolwarm')
+    ax2.plot_trisurf(x, y, u, cmap='coolwarm')
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('y')
+    ax1.set_title(f'Solution for c=0, $res={res2:.3e}$')
+    ax2.set_title(f'Solution for c={c}, $res={res:.3e}$')
+    ax1.view_init(25, -135)
+    ax2.view_init(25, -135)
+    fig.tight_layout()
+    fig.savefig('handin/experiment2D.pdf')
+    # plt.show()
 
 
 def index_helper(i, j, m):
@@ -244,4 +282,40 @@ def fdm(N, a=1, b=2, c=2):
 
     return xx, yy, u, res
 
-experiment_1(n=20)
+
+def ex_fdm(min_max=0.05, max_max=2, n=20, c=2, min_angle=30):
+    max_areas = np.logspace(np.log2(min_max), np.log2(max_max), n, base=2)
+    results = np.zeros(n)
+    N = np.zeros(n)
+    for i, max_area in enumerate(max_areas):
+        x, y, simplices = create_mesh(min_angle, max_area)
+        N[i] = x.size
+        xx, yy, u, res = fdm(N[i], c=c)
+        N[i] = res[1]
+        results[i] = res[0]
+        print(res[1], x.size, xx.shape)
+    fig, ax1 = plt.subplots(nrows=1, figsize=(7,2.5))
+    ax1.plot(N, results)
+    # ax1.set_xscale('log')
+    ax1.set_xlabel('Number of degrees of freedom in the mesh $N_{dof}$')
+    # ax2.set_xscale('log')
+    # ax2.set_xlabel('Maximum triangle area')
+    ax1.set_title(f'Residual for FDM, c={2}')
+    # ax2.set_title(f'Number of points in FDM mesh')
+    # ax2.plot(max_areas, N)
+    fig.tight_layout()
+    fig.savefig('handin/exFDM.pdf')
+
+def simple_fdm(N=200, c=2):
+    xx, yy, u, res = fdm(N, c=c)
+    # U = analytical_solution(xx, 6, 1, 2, c)
+    fig, ax = plt.subplots(figsize=(7, 2.5), subplot_kw=dict(projection='3d'))
+    ax.set_title(f'FDM. c={c}, res={res[0]:.3e}, N={xx.size}')
+    ax.plot_surface(xx, yy, u, cmap='coolwarm')
+    ax.view_init(25, -135)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    fig.tight_layout()
+    fig.savefig('handin/simpleFDM.pdf')
+# experiment_1(n=20, c=0)
+ex_fdm()
