@@ -138,6 +138,11 @@ If $ c = 0 $ then we trivially have $ \V{f}^e = 0 $. if instead, $ c \neq 0 $ we
 \end{equation}
 which can be seen by integrating any of the barycentric coordinates over a triangle with points $ \V{p}_i = (0,0), \V{p}_j = (\alpha, 0), \V{p}_k = (\beta, \gamma) $. Any triangle can be rotated and translated to have these coordinates if we let $ 0 < \alpha \leq \beta $, meaning the result is general.
 
+In one dimension we get from straight integration.
+\begin{equation}\label{key}
+	f^e_i = \Delta x / 2
+\end{equation}
+
 
 
 \paragraph{Step 5.} Next we need to put all the different element matrices into the global matrix. Here we can leverage the fact since the element matrices consists of an outer product between one vector and itself, the resulting matrices are symmetric. This means we do not have to worry too much about the index order when assembling the system. For each element we take the global index of the vertices in the element, create a meshgrid of these values, and add the 9/4 (2D/1D) values in the element matrix to the corresponding values in the global matrix. Note the adding part: since each vertex may be represented in a multitude of elements, we need to incorporate the contribution from all elements.
@@ -155,11 +160,11 @@ Since we are dealing with point-wise / Dirichlet bondary conditions, incorporati
 \section{Experiments}
 For this weeks experiments we solve the system on a rectangular domain with $ x \in [0, 6] $ and $ y \in [0, 2] $, subject to the boundary condition $ u(0, y) = a, \ u(6, y) = b $.
 
-To evaluate the accuracy of the method, we compare the numerical solution $ \hat{u}_i $ to the analytical solution $ u(\V{p}_i) $ using a residual:
+To evaluate the accuracy of the method, we compare the numerical solution $ \hat{u}_i $ to the analytical solution $ u(\V{p}_i) $ using the root mean square:
 \begin{equation}\label{key}
-	\text{res} = \sum_{i} (\hat{u}_i - u(\V{p}_i))^2/N_{\text{dof}}
+	\text{res} = \sqrt{\sum_{i} (\hat{u}_i - u(\V{p}_i))^2/N_{\text{dof}}}
 \end{equation}
-where $ N_{\text{dof}} $ is the number of degrees of freedom for the system - ie the total number of nodes in the domain, minus the number of nodes subject to boundary conditions.
+where $ N_{\text{dof}} $ is the number of degrees of freedom for the system - ie the total number of nodes in the domain, minus the number of nodes subject to boundary conditions. (this ensures we get a nonsensical result in degenerate cases, like ones where all nodes are boundary nodes).
 
 \subsection{The analytical solution}
 In the case of $ c\in \mathbb{R} $ we can solve the system analytically. With these boundary conditions we exclude all dependence on $ y $, giving an analytical solution (found by integrating a constant twice, and solving for two known points to get the factors of the linear and constant term):
@@ -170,5 +175,12 @@ which also includes the straight line solution of $ c=0 $:
 \begin{equation}\label{key}
 	u(x,y) = \frac{b-a}{6} x + a = \frac{\Delta y}{\Delta x} x + a
 \end{equation}
+
+\subsection{One dimension}
+In one dimension the $ \V{K} $ matrix only has elements along the main and two off diagonals, since each vertex is only part of two neighbouring elements. Because of this, the matrix is equal to what one would get if one uses the finite difference method, without ghost nodes, and using dirichlet boundary conditions. Letting $ c=0 $ and solving for a computational mesh of 11 equidistant points between 1 and 2 gives the result seen in figure \textbf{REF}. The solution is just $ u = x $, and we see that the residual is but an order of magnitude above the machine epsilon, even with just 11 points.
+
+I suspect this is not because of some insane precision in the finite element method, but rather due to the fact, that the shape functions are essentially a piecewise linear interpolation between points, so when the solution \textit{is} a linear function, it will be as close to exact as possible.
+
+Indeed we will see this as we go to the two dimensional case, and set $ c\neq 0 $
 
 \end{document}
