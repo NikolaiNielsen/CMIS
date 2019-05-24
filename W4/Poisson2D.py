@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import sys
+from progress.bar import Bar
 sys.path.append('../useful_functions/')
 import useful_functions as uf
 import mesh
@@ -119,13 +120,128 @@ def calc_res(x, u, x0=6, a=1, b=2, c=0):
     N_border = np.sum(left + right)
     sol = analytical_solution(x, x0, a, b, c)
     res = np.sqrt(np.sum((u-sol)**2))/(x.size-N_border)
-    return res
+    return res, x.size-N_border
 
 
-c = 2
-x, y, simplices, u = solve_system(min_angle=30, max_area=0.1, c=c)
-res = calc_res(x, u)
+def experiment_1(min_max=0.05, max_max=2, n=50, c=2, min_angle=30):
+    max_areas = np.logspace(np.log2(min_max), np.log2(max_max), n, base=2)
+    results = np.zeros((2, n))
+    dof = np.zeros(n)
+    n_verts = np.zeros(n)
+    qualities = np.zeros((2,n))
+    n_zeros = np.zeros(n)
+    bar = Bar('Solving', max=n)
+    for i, max_area in enumerate(max_areas):
+        x, y, simplices, u = solve_system(min_angle=min_angle,
+                                          max_area=max_area, c=c)
+        _, _, _, (res, _) = fdm(x.size, c=2)
+        Q1, Q2 = mesh.calc_quality(simplices, x, y)
+        n_verts[i] = x.size
+        qualities[0, i] = np.average(Q1)
+        qualities[1, i] = np.average(Q2)
+        n_zero = (Q1 == 0) + (Q2 == 0)
+        n_zeros[i] = np.sum(n_zero)
+        results[0, i], dof[i] = calc_res(x, u, c=c)
+        results[1, i] = res
+        bar.next()
+    bar.finish()
+    fig, ax = plt.subplots(nrows=3)
+    ax = ax.flatten()
+    for a in ax:
+        a.set_xscale('log')
+    ax[0].plot(max_areas, results[0], label='FEM')
+    ax[0].plot(max_areas, results[1], label='FDM')
+    ax[0].legend()
+    ax[1].plot(max_areas, dof)
+    ax[1].plot(max_areas, n_verts)
+    ax[2].plot(max_areas, qualities.T)
+    fig.tight_layout()
+    print(np.sum(n_zeros != 0))
+    plt.show()
 
-fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
-ax.plot_trisurf(x, y, u, cmap='jet')
-plt.show()
+
+def simple_ex():
+    c = 2
+    x, y, simplices, u = solve_system(min_angle=30, max_area=0.1, c=c)
+    res, _ = calc_res(x, u)
+
+    fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+    ax.plot_trisurf(x, y, u, cmap='coolwarm')
+    plt.show()
+
+
+def index_helper(i, j, m):
+    # Returns the 1D index for a 2D matrix, with j being running index (column
+    # number), m being column count and i being row number
+    return m*i+j
+
+
+def fdm(N, a=1, b=2, c=2):
+    Nx = np.round(np.sqrt(3*N)).astype(int)
+    Ny = np.round(np.sqrt(N/3)).astype(int)
+    x = np.linspace(0,6, Nx)
+    y = np.linspace(0,2, Ny)
+    dx = 6/(Nx-1)
+    dy = 2/(Ny-1)
+    xx, yy = np.meshgrid(x, y)
+    n, m = xx.shape
+    u = np.zeros(xx.shape)
+    K = np.zeros((xx.size, xx.size))
+    f = np.zeros(xx.size)
+    if Ny < 3:
+        return xx, yy, u, (np.nan, 0)
+    for i in range(n):
+        for j in range(m):
+
+            node_index = index_helper(i, j, m)
+            # print(i, j, node_index)
+            right_edge = j == 0
+            left_edge = j == m-1
+            top_edge = i == n-1
+            bottom_edge = i == 0
+            border = right_edge + top_edge + left_edge + bottom_edge
+            
+            if not border:
+                i_in_stencil = np.array([i,   i,   i, i+1, i-1])
+                j_in_stencil = np.array([j, j+1, j-1,   j,   j])
+                stencil_indices = index_helper(i_in_stencil, j_in_stencil, m)
+                stencil_values = np.array([- 2/dx/dx - 2/dy/dy,
+                                        1/dx/dx,
+                                        1/dx/dx,
+                                        1/dy/dy,
+                                        1/dy/dy])
+                K[node_index, stencil_indices] = stencil_values
+                f[node_index] = c
+            elif right_edge or left_edge:
+                K[node_index, node_index] = 1
+                f[node_index] = right_edge * a + left_edge * b
+            elif top_edge:
+                i_in_stencil = np.array([i,   i,   i, i-1, i-2])
+                j_in_stencil = np.array([j, j+1, j-1,   j,   j])
+                stencil_indices = index_helper(i_in_stencil, j_in_stencil, m)
+                stencil_values = np.array([- 2/dx/dx + 1/dy/dy,
+                                           1/dx/dx,
+                                           1/dx/dx,
+                                           -2/dy/dy,
+                                           1/dy/dy])
+                K[node_index, stencil_indices] = stencil_values
+                f[node_index] = c
+            elif bottom_edge:
+                i_in_stencil = np.array([i,   i,   i, i+1, i+2])
+                j_in_stencil = np.array([j, j+1, j-1,   j,   j])
+                stencil_indices = index_helper(i_in_stencil, j_in_stencil, m)
+                stencil_values = np.array([- 2/dx/dx + 1/dy/dy,
+                                           1/dx/dx,
+                                           1/dx/dx,
+                                           -2/dy/dy,
+                                           1/dy/dy])
+                K[node_index, stencil_indices] = stencil_values
+                f[node_index] = c
+    U = np.linalg.solve(K, f)
+    u = U.reshape(xx.shape)
+
+    res = calc_res(xx, u, a=a, b=b, c=c)
+
+    return xx, yy, u, res
+
+experiment_1(n=20)
