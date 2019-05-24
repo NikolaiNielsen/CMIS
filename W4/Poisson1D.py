@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
-sys.path.append('../')
+sys.path.append('../useful_functions')
 import useful_functions as uf
 
 
@@ -52,3 +52,9 @@ def inspect_matrix(m):
     return fig, ax
 
 y = np.linalg.solve(K, f)
+
+res = np.sqrt(np.sum(y-x)**2)/(y.size - 2)
+fig, ax = plt.subplots()
+ax.plot(x, y)
+uf.pretty_plotting(fig, ax, title=f'Solution to the Laplace equation in 1D, res = {res:.3e}', f_size=14, filename='handin/experiment1d.pdf')
+plt.show()
