@@ -177,10 +177,68 @@ which also includes the straight line solution of $ c=0 $:
 \end{equation}
 
 \subsection{One dimension}
-In one dimension the $ \V{K} $ matrix only has elements along the main and two off diagonals, since each vertex is only part of two neighbouring elements. Because of this, the matrix is equal to what one would get if one uses the finite difference method, without ghost nodes, and using dirichlet boundary conditions. Letting $ c=0 $ and solving for a computational mesh of 11 equidistant points between 1 and 2 gives the result seen in figure \textbf{REF}. The solution is just $ u = x $, and we see that the residual is but an order of magnitude above the machine epsilon, even with just 11 points.
+\begin{figure}
+	\includegraphics[width=\linewidth]{experiment1d.pdf}
+	\caption{Solution in 1, with $ c=0 $. Note the low residual.}
+	\label{fig:exp1D}
+\end{figure}
+\paragraph{Experiment}
+In one dimension the $ \V{K} $ matrix only has elements along the main and two off diagonals, since each vertex is only part of two neighbouring elements. Because of this, the matrix is equal to what one would get if one uses the finite difference method, without ghost nodes, and using dirichlet boundary conditions. Letting $ c=0 $ and solving for a computational mesh of 11 equidistant points between 1 and 2 gives the result seen in figure \ref{fig:exp1D}. The solution is just $ u = x $, and we see that the residual is but an order of magnitude above the machine epsilon, even with just 11 points.
 
 I suspect this is not because of some insane precision in the finite element method, but rather due to the fact, that the shape functions are essentially a piecewise linear interpolation between points, so when the solution \textit{is} a linear function, it will be as close to exact as possible.
 
-Indeed we will see this as we go to the two dimensional case, and set $ c\neq 0 $
+Indeed we will see this as we go to the two dimensional case, and set $ c\neq 0 $.
 
+\subsection{Two Dimensions}
+\begin{figure}
+	\includegraphics[width=\linewidth]{experiment2D.pdf}
+	\caption{Solutions in 2D, with $ c=0 $ (left) and $ c=2 $ (right). Note again the low residual for the plane. Triangle settings: minimum angle (30 degrees), maximum area (0.1 pixels squared)}
+	\label{fig:exp2D}
+\end{figure}
+\paragraph{Experiment}
+When going to two dimensions we see the same tendency with $ c=0 $ (see figure \ref{fig:exp2D}, left). The result is more interesting when setting $ c\neq 0 $ (figure \ref{fig:exp2D}, right), where the residual of an appreciable magnitude.
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{experiment1c2.pdf}
+	\caption{Residual, number of vertices, number of degrees of freedom, and the average of two quality measures (minimum triangle area and aspect ratio), all as a function of maximum triangle area. Note the log scale on the first axis. No meshes had any triangles with any quality measure equal to 0. Minimum triangle area set to 30 degrees}
+	\label{fig:exp2D1}
+\end{figure}
+
+\paragraph{Experiment}
+Next we analyse the residual dependency on the max triangle area (and therefore the number of vertices in the mesh), by solving the system for a range of maximum triangle areas (between 0.05 and 2 pixels squared). The result is seen in figure \ref{fig:exp2D1}. Here we see the expected drop in magnitude of the residual as maximum triangle size is decreased (and the number of vertices is increased).
+
+We also see no big dependence on maximum triangle area, for the averages of the quality measures - \texttt{Triangle} produces quality meshes with the input settings. No meshes had any triangle with 0 quality measure.
+\begin{figure}
+	\includegraphics[width=\linewidth]{experiment2c0.pdf}
+	\caption{Residual,as a function of maximum triangle area. All other settings are equal to that from figure \ref{fig:exp2D1}}
+	\label{fig:exp2D2}
+\end{figure}
+
+\paragraph{Experiment} To make sure that the low residual for the plane is not a fluke, we perform the same analysis as before for $ c=0 $, the result (only the residual - the number of vertices and the quality does not change with $ c $) is shown in figure \ref{fig:exp2D2}. Again we see a residual fluctuating around the machine epsilon. Like the shape function in 1D, the barycentric coordinates essentially performs a linear interpolation between points, so I expect this is the reason why we see such a low residual.
+
+\paragraph{Experiment}
+\begin{figure}[b]
+	\includegraphics[width=\linewidth]{simpleFDM.pdf}
+	\caption{Solution obtained using Finite Difference Method, for $ c=2 $. Note the low, low residual.}
+	\label{fig:simpleFDM}
+\end{figure}
+Lastly we measure the quality of the finite element method as compared to the finite difference method. We create a grid with approximately the same number of points as that for the finite element method. We calculate the number of points in each direction as follows:
+\begin{equation}\label{key}
+	\Delta x = \ell_x/ N_x, \quad \Delta y = \ell_y/N_y, \quad N=N_x N_y
+\end{equation}
+where $ \ell_x $ is the size of the domain in the $ x $-direction and $ N_x $ is the number of points in the $ x $-direction (and likewise for $ y $). Setting $ \Delta x = \Delta y $ gives
+\begin{equation}\label{key}
+	N_x = \sqrt{3N}, \quad N_y = \sqrt{\frac{N}{3}}
+\end{equation}
+But these are not necessarily integers, so instead we round them to the nearest integer.
+\begin{equation}\label{key}
+	N_x = \Big\lfloor\sqrt{3N}\Big\rceil, \quad N_y = \Bigg\lfloor\sqrt{\frac{N}{3}}\Bigg\rceil
+\end{equation}
+Of course, since we are using the finite difference method, and are dealing with second order differences, we cannot have $ N_y<3 $, so we restrict ourselves to that. We are not given boundary conditions for the top and bottom of the domain, as they are not needed to uniquely determine the solution. However, we need to modify the finite difference formulas for the nodes on the top and bottom boundary so we do not access any non-existing nodes. To do this we employ a forward difference at the bottom, and a backwards difference at the top (as given in \url{https://en.wikipedia.org/wiki/Finite_difference#Higher-order_differences}). 
+\begin{figure}[b]
+	\includegraphics[width=\linewidth]{exFDM.pdf}
+	\caption{Residuals for solutions found with FDM, for $ c=2 $, as a function of $ N $}
+	\label{fig:exFDM}
+\end{figure}
+First we plot the result for $ N = 200 $ in figure \ref{fig:simpleFDM}, and as expected we get a parabola, but with miniscule residuals. Calculating these for all values of $ N $ as in \ref{fig:exp2D1} we get the result in figure \ref{fig:exFDM}. With the Finite Difference Method we see incredibly small residuals, even for relatively low $ N $ (24, 18 degrees of freedom). It might be we need to go nearer the degenerate case for higher residuals to appear, but it does seem suspicious.
 \end{document}
