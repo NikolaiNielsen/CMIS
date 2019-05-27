@@ -57,7 +57,7 @@ def assemble_global_matrix(x, y, simplices, func_elem, d=2, elem_dict=dict()):
     - func_elem: function that calculates the element matrix for a given
                  element, must have signature: func_elem(tri, area, **kwargs)
     - d: dimensionality of the output space (ie, scalar field or vector field)
-    - kwargs: keyword arguments passed to func_elem
+    - elem_dict: keyword arguments passed to func_elem
 
     Returns:
     - K: (nd, nd) Global matrix for the FEM system
@@ -89,7 +89,7 @@ def create_f_vector(x, y, simplices, func_source, d=2, source_dict=dict()):
                    element, must have signature:
                    func_source(tri, **kwargs)
     - d: dimensionality of the output space (ie, scalar field or vector field)
-    - kwargs: keyword arguments passed to func_source
+    - source_dict: keyword arguments passed to func_source
 
     Returns:
     - f: (nd, ) Source term vector for the system
@@ -158,7 +158,31 @@ def FEM(x, y, simplices, func_elem, func_source,
         boundary_masks, boundary_vals, 
         source_masks=None, source_vals=0,
         d=2, elem_dict=dict(), source_dict=dict()):
-    
+    """
+    Solves a given system using the FEM method
+    Arguments:
+    - x, y: (n,) array of vertex positions
+    - simplices: (n, 3) array of vertex numbers that make up each element
+    - func_elem: function that calculates the element matrix for a given
+                 element, must have signature: func_elem(tri, area, **kwargs)
+    - func_source: function that calculates the element matrix for a given
+                   element, must have signature:
+                   func_source(tri, **kwargs)
+    - boundary_masks: (n,) array or list of arrays with booleans, specifying
+                      vertices subject to pointwise boundary conditions
+    - boundary_vals: int or (nd,) array (or lists of these). Values for
+                     boundary conditions
+    - source_masks: (n,) array or list of arrays with booleans, specifying
+                    vertices subject to added source terms.
+    - source_vals: int or (nd,) array (or lists of these). Values for
+                   added source terms
+    - d: dimensionality of the output space (ie, scalar field or vector field)
+    - elem_dict: keyword arguments passed to func_elem
+    - source_dict: keyword arguments passed to func_source
+
+    Returns:
+    - *u: d (n,) arrays of values - the solution to the FEM problem. 
+    """
     K = assemble_global_matrix(x, y, simplices, func_elem, d, elem_dict)
     f = create_f_vector(x, y, simplices, func_source, d, source_dict)
     if isinstance(boundary_masks, list):
