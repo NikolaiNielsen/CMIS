@@ -5,6 +5,7 @@ import scipy.io as io
 sys.path.append('../useful_functions')
 import useful_functions as uf
 import mesh
+import fem
 
 np.set_printoptions(threshold=np.inf)
 
@@ -131,19 +132,48 @@ def global_index_from_bool(bool_array, d=2):
     return el
 
 
-d = 2
-x, y, simplices = load_mat('data.mat')
-K = assemble_global_matrix(x, y, simplices, d)
-K = add_boundary(K, x, y, d)
-f = np.zeros(K.shape[0])
-left = x == np.amin(x)
-bottomright = (x == np.amax(x)) * (y == np.amin(y))
-vert = global_index_from_bool(bottomright, d).flatten()
-f[vert[1]] = -5e8
-u = np.linalg.solve(K, f)
-dispx = u[:x.size]
-dispy = u[x.size:]
-fig, ax = plt.subplots()
-ax.triplot(x, y, simplices)
-ax.triplot(x+dispx, y+dispy, simplices)
-plt.show()
+def simple_ex():
+    x, y, simplices = load_mat('data.mat')
+    K = assemble_global_matrix(x, y, simplices)
+    K = add_boundary(K, x, y)
+    f = np.zeros(K.shape[0])
+    left = x == np.amin(x)
+    bottomright = (x == np.amax(x)) * (y == np.amin(y))
+    vert = global_index_from_bool(bottomright).flatten()
+    f[vert[1]] = -5e8
+    u = np.linalg.solve(K, f)
+    dispx = u[:x.size]
+    dispy = u[x.size:]
+    fig, ax = plt.subplots()
+    ax.triplot(x, y, simplices)
+    ax.triplot(x+dispx, y+dispy, simplices)
+    plt.show()
+
+
+def func_source(tri):
+    return 0
+
+
+def ex_with_external():
+    bottom_force = -5e8
+    x, y, simplices = load_mat('data.mat')
+    mask = x == np.amin(x)
+    vals = 0
+    K = fem.assemble_global_matrix(x, y, simplices, create_element_matrix,
+                                   D=STEEL_D)
+    f = fem.create_f_vector(x, y, simplices, func_source)
+    K, f = fem.add_point_boundary(K, f, mask, vals)
+
+    mask = (x == np.amax(x)) * (y == np.amin(y))
+    vals = [0, bottom_force]
+    f = fem.add_to_source(f, mask, vals)
+    u = np.linalg.solve(K, f)
+    x_displacement, y_displacement = fem.unpack_u(u)
+    x_new = x + x_displacement
+    y_new = y + y_displacement
+    fig, ax = plt.subplots()
+    ax.triplot(x, y, simplices)
+    ax.triplot(x_new, y_new, simplices)
+    plt.show()
+
+ex_with_external()
