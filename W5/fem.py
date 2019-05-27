@@ -48,7 +48,7 @@ def calc_areas(triangles):
     return area
 
 
-def assemble_global_matrix(x, y, simplices, func_elem, d=2, **kwargs):
+def assemble_global_matrix(x, y, simplices, func_elem, d=2, elem_dict=dict()):
     """
     Assembles the global matrix K for a FEM system.
     Arguments:
@@ -69,7 +69,7 @@ def assemble_global_matrix(x, y, simplices, func_elem, d=2, **kwargs):
     indices = element_to_global(simplices, d)
 
     for tri, area, ind in zip(triangles, areas, indices):
-        el = func_elem(tri, area, **kwargs)
+        el = func_elem(tri, area, **elem_dict)
         if not np.allclose(el, el.T):
             print('Element matrix not symmetric')
             print(el)
@@ -79,7 +79,7 @@ def assemble_global_matrix(x, y, simplices, func_elem, d=2, **kwargs):
     return K
 
 
-def create_f_vector(x, y, simplices, func_source, d=2, **kwargs):
+def create_f_vector(x, y, simplices, func_source, d=2, source_dict=dict()):
     """
     Creates the source vector f for the FEM system
     Arguments:
@@ -98,7 +98,7 @@ def create_f_vector(x, y, simplices, func_source, d=2, **kwargs):
     f = np.zeros(d*x.size)
     for tri, simplex in zip(triangles, simplices):
         ind = get_global_indices(simplex, d)
-        f_tri = func_source(tri, **kwargs)
+        f_tri = func_source(tri, **source_dict)
         f[ind] += f_tri
     return f
 
@@ -152,3 +152,28 @@ def unpack_u(u, d=2):
         y = u[N:2*N]
         z = u[2*N:]
         return x, y, z
+
+
+def FEM(x, y, simplices, func_elem, func_source,
+        boundary_masks, boundary_vals, 
+        source_masks=None, source_vals=0,
+        d=2, elem_dict=dict(), source_dict=dict()):
+    
+    K = assemble_global_matrix(x, y, simplices, func_elem, d, elem_dict)
+    f = create_f_vector(x, y, simplices, func_source, d, source_dict)
+    if isinstance(boundary_masks, list):
+        for mask, vals in zip(boundary_masks, boundary_vals):
+            K, f = add_point_boundary(K, f, mask, vals, d)
+    else:
+        K, f = add_point_boundary(K, f, boundary_masks, boundary_vals, d)
+    
+    if source_masks is not None:
+        if isinstance(source_masks, list):
+            for mask, vals in zip(source_masks, source_vals):
+                f = add_to_source(f, mask, vals, d)
+        else:
+            f = add_to_source(f, source_masks, source_vals, d)
+
+    u = np.linalg.solve(K, f)
+
+    return unpack_u(u, d)
