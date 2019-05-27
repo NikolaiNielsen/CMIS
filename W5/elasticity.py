@@ -64,7 +64,7 @@ def calc_areas(triangles):
     return area
 
 
-def get_global_indices(simplices, d=1, order='alt'):
+def get_global_indices(simplices, d=2):
     # Given a list of 3 vertices and a dimensionality of d, returns the global
     # indices for a given coordinate:
     # order: 'alt'/'stack' - 'alt' is alternating order (x,y,z, x,y,z, ...)
@@ -73,19 +73,12 @@ def get_global_indices(simplices, d=1, order='alt'):
     coords = np.arange(d)
     N_verts = np.amax(simplices)+1
     for tri in simplices:
-        if order=='stack':
-            el = np.array([coords*N_verts + i for i in tri])
-        else:
-            el = np.array([coords+d*i for i in tri])
+        el = np.array([coords*N_verts + i for i in tri])
         elements.append(np.meshgrid(el, el))
     return elements
 
 
-def create_fake_elements(N):
-    return np.ones((N,N))
-
-
-def assemble_global_matrix(x, y, simplices, d=1):
+def assemble_global_matrix(x, y, simplices, d=2):
     K = np.zeros((x.size*d, x.size*d))
 
     triangles = mesh.all_triangles(simplices, x, y)
@@ -93,17 +86,29 @@ def assemble_global_matrix(x, y, simplices, d=1):
 
     elements = []
     for tri, area in zip(triangles, areas):
-        # elements.append(create_element_matrix(tri, area))
-        elements.append(create_fake_elements(6))
+        elements.append(create_element_matrix(tri, area))
     
     for el in elements:
         if not np.allclose(el, el.T):
             print('simplex not symmetric')
             print(el)
-    indices = get_global_indices(simplices, d, order='stack')
+    indices = get_global_indices(simplices, d)
     for el, ind in zip(elements, indices):
         x, y = ind
         K[x, y] += el
+    return K
+
+
+def add_boundary(K, x, y, d=2):
+    # All vertices on left border (x=0) are fastened
+    left = x == np.amin(x)
+    coords = np.arange(d)
+    N_verts = x.size
+    indices = np.arange(N_verts)[left]
+    el = np.array([coords*N_verts + i for i in indices])
+    # Set all elements (except the diagonal) of row el to 0.
+    K[el] = 0
+    K[el, el] = 1
     return K
 
 
@@ -117,23 +122,28 @@ def load_mat(file, return_areas=False):
         return x, y, simplices, areas
     return x, y, simplices
 
+
+def global_index_from_bool(bool_array, d=2):
+    coords = np.arange(d)
+    N = bool_array.size
+    indices = np.arange(N)[bool_array]
+    el = np.array([coords*N + i for i in indices])
+    return el
+
+
+d = 2
 x, y, simplices = load_mat('data.mat')
-triangles = mesh.all_triangles(simplices, x, y)
-areas = calc_areas(triangles)
-# K = create_element_matrix(triangles[0], areas[0])
-K = assemble_global_matrix(x, y, simplices, d=2)
-
-
-
-# non_zero = np.sum(K != 0)
-# eigs, _ = np.linalg.eig(K)
-# if np.allclose(np.imag(eigs), 0):
-    # eigs = np.real(eigs)
-
-# print((K==K.T).all())
-# print(eigs)
+K = assemble_global_matrix(x, y, simplices, d)
+K = add_boundary(K, x, y, d)
+f = np.zeros(K.shape[0])
+left = x == np.amin(x)
+bottomright = (x == np.amax(x)) * (y == np.amin(y))
+vert = global_index_from_bool(bottomright, d).flatten()
+f[vert[1]] = -5e8
+u = np.linalg.solve(K, f)
+dispx = u[:x.size]
+dispy = u[x.size:]
 fig, ax = plt.subplots()
-ax.spy(K-K.T)
-# print(K-K.T)
-print(np.allclose(K, K.T))
+ax.triplot(x, y, simplices)
+ax.triplot(x+dispx, y+dispy, simplices)
 plt.show()
