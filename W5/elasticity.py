@@ -167,13 +167,14 @@ def ex_with_external():
     mask = (x == np.amax(x)) * (y == np.amin(y))
     vals = [0, bottom_force]
     f = fem.add_to_source(f, mask, vals)
+
     u = np.linalg.solve(K, f)
     x_displacement, y_displacement = fem.unpack_u(u)
     x_new = x + x_displacement
     y_new = y + y_displacement
     fig, ax = plt.subplots()
-    ax.triplot(x, y, simplices)
-    ax.triplot(x_new, y_new, simplices)
+    ax.triplot(x, y, simplices, color='r')
+    ax.triplot(x_new, y_new, simplices, color='b')
     plt.show()
 
 ex_with_external()
