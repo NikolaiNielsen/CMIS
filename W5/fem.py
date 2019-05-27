@@ -79,26 +79,26 @@ def assemble_global_matrix(x, y, simplices, func_elem, d=2, **kwargs):
     return K
 
 
-def create_f_vector(x, y, simplices, func_boundary, d=2, **kwargs):
+def create_f_vector(x, y, simplices, func_source, d=2, **kwargs):
     """
     Creates the source vector f for the FEM system
     Arguments:
     - x, y: (n,) array of vertex positions
     - simplices: (n, 3) array of vertex numbers that make up each element
-    - func_boundary: function that calculates the element matrix for a given
-                     element, must have signature:
-                     func_boundary(tri, area, **kwargs)
+    - func_source: function that calculates the element matrix for a given
+                   element, must have signature:
+                   func_source(tri, **kwargs)
     - d: dimensionality of the output space (ie, scalar field or vector field)
-    - kwargs: keyword arguments passed to func_boundary
+    - kwargs: keyword arguments passed to func_source
 
     Returns:
     - f: (nd, ) Source term vector for the system
     """
     triangles = mesh.all_triangles(simplices, x, y)
-    indices = element_to_global(simplices, d)
     f = np.zeros(d*x.size)
-    for tri, ind in zip(triangles, indices):
-        f_tri = func_boundary(tri, **kwargs)
+    for tri, simplex in zip(triangles, simplices):
+        ind = get_global_indices(simplex, d)
+        f_tri = func_source(tri, **kwargs)
         f[ind] += f_tri
     return f
 
@@ -116,11 +116,39 @@ def add_point_boundary(K, f, mask, vals, d=2):
     Returns:
     - K, f: updated matrix and source vector
     """
-    vertices = np.where(mask)
-    vertices = np.atleast_2d(vertices)
     N = mask.size
+    vertices = np.arange(N)[mask]
     indices = get_global_indices(vertices, N, d)
     K[indices] = 0
     K[indices, indices] = 1
     f[indices] = vals
     return K, f
+
+
+def add_to_source(f, mask, vals, d=2):
+    """
+    Adds vals to source term, where mask applies
+    """
+    N = mask.size
+    vertices = np.arange(N)[mask]
+    indices = get_global_indices(vertices, N, d)
+    f[indices] += vals
+    return f
+
+
+def unpack_u(u, d=2):
+    """
+    Unpacks u into d vectors of equal length
+    """
+    N = int(u.size/d)
+    if d==1:
+        return u
+    elif d==2:
+        x = u[:N]
+        y = u[N:]
+        return x, y
+    else:
+        x = u[:N]
+        y = u[N:2*N]
+        z = u[2*N:]
+        return x, y, z
