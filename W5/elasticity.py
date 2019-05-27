@@ -157,19 +157,18 @@ def func_source(tri):
 def ex_with_external():
     bottom_force = -5e8
     x, y, simplices = load_mat('data.mat')
-    mask = x == np.amin(x)
-    vals = 0
-    K = fem.assemble_global_matrix(x, y, simplices, create_element_matrix,
-                                   D=STEEL_D)
-    f = fem.create_f_vector(x, y, simplices, func_source)
-    K, f = fem.add_point_boundary(K, f, mask, vals)
+    mask1 = x == np.amin(x)
+    vals1 = 0
+    elem_dict = dict(D=STEEL_D)
 
-    mask = (x == np.amax(x)) * (y == np.amin(y))
-    vals = [0, bottom_force]
-    f = fem.add_to_source(f, mask, vals)
+    mask2 = (x == np.amax(x)) * (y == np.amin(y))
+    vals2 = [0, bottom_force]
 
-    u = np.linalg.solve(K, f)
-    x_displacement, y_displacement = fem.unpack_u(u)
+    x_displacement, y_displacement = fem.FEM(x, y, simplices,
+                                             create_element_matrix,
+                                             func_source,
+                                             mask1, vals1, mask2, vals2,
+                                             elem_dict=elem_dict)
     x_new = x + x_displacement
     y_new = y + y_displacement
     fig, ax = plt.subplots()
