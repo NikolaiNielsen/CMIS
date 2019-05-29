@@ -9,6 +9,7 @@ import fem
 
 np.set_printoptions(threshold=np.inf)
 
+
 def D(E=69e9, nu=0.3):
     """
     Returns the Elasticity matrix "D" for a given Young Modulus "E" and Poisson
@@ -46,73 +47,6 @@ def create_element_matrix(triangle, area, D=STEEL_D):
     return Ke
 
 
-def calc_areas(triangles):
-    """
-    Calculates the area of an array of triangles.
-    Assumes an (n, 3, 2)-array of positions, n triangles, each with 3 vertices,
-    each with 2 dimensions
-    """
-    # The area is given by half the length of the cross product between two of
-    # the triangle vectors.
-
-    # First we get the vectors by subracting a permuted array of triangles
-    vectors = triangles - triangles[:, [1, 2, 0]]
-
-    # Cross product of 2D vectors is just the z-component, which is also the
-    # length of the cross product
-    crosses = np.cross(vectors[:, 1], vectors[:, 2])
-    area = crosses/2
-    return area
-
-
-def get_global_indices(simplices, d=2):
-    # Given a list of 3 vertices and a dimensionality of d, returns the global
-    # indices for a given coordinate:
-    # order: 'alt'/'stack' - 'alt' is alternating order (x,y,z, x,y,z, ...)
-    #                      - 'stack' is stack (x, x, x,..., y,y ,y,...)
-    elements = []
-    coords = np.arange(d)
-    N_verts = np.amax(simplices)+1
-    for tri in simplices:
-        el = np.array([coords*N_verts + i for i in tri])
-        elements.append(np.meshgrid(el, el))
-    return elements
-
-
-def assemble_global_matrix(x, y, simplices, d=2):
-    K = np.zeros((x.size*d, x.size*d))
-
-    triangles = mesh.all_triangles(simplices, x, y)
-    areas = calc_areas(triangles)
-
-    elements = []
-    for tri, area in zip(triangles, areas):
-        elements.append(create_element_matrix(tri, area))
-    
-    for el in elements:
-        if not np.allclose(el, el.T):
-            print('simplex not symmetric')
-            print(el)
-    indices = get_global_indices(simplices, d)
-    for el, ind in zip(elements, indices):
-        x, y = ind
-        K[x, y] += el
-    return K
-
-
-def add_boundary(K, x, y, d=2):
-    # All vertices on left border (x=0) are fastened
-    left = x == np.amin(x)
-    coords = np.arange(d)
-    N_verts = x.size
-    indices = np.arange(N_verts)[left]
-    el = np.array([coords*N_verts + i for i in indices])
-    # Set all elements (except the diagonal) of row el to 0.
-    K[el] = 0
-    K[el, el] = 1
-    return K
-
-
 def load_mat(file, return_areas=False):
     mat = io.loadmat(file)
     x = mat['X'].flatten()
@@ -122,32 +56,6 @@ def load_mat(file, return_areas=False):
         areas = mat['A']
         return x, y, simplices, areas
     return x, y, simplices
-
-
-def global_index_from_bool(bool_array, d=2):
-    coords = np.arange(d)
-    N = bool_array.size
-    indices = np.arange(N)[bool_array]
-    el = np.array([coords*N + i for i in indices])
-    return el
-
-
-def simple_ex():
-    x, y, simplices = load_mat('data.mat')
-    K = assemble_global_matrix(x, y, simplices)
-    K = add_boundary(K, x, y)
-    f = np.zeros(K.shape[0])
-    left = x == np.amin(x)
-    bottomright = (x == np.amax(x)) * (y == np.amin(y))
-    vert = global_index_from_bool(bottomright).flatten()
-    f[vert[1]] = -5e8
-    u = np.linalg.solve(K, f)
-    dispx = u[:x.size]
-    dispy = u[x.size:]
-    fig, ax = plt.subplots()
-    ax.triplot(x, y, simplices)
-    ax.triplot(x+dispx, y+dispy, simplices)
-    plt.show()
 
 
 def func_source(tri):
@@ -182,5 +90,3 @@ def ex_with_external():
     print(area_before)
     print(area_after)
     plt.show()
-
-ex_with_external()
