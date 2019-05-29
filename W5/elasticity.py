@@ -155,7 +155,7 @@ def func_source(tri):
 
 
 def ex_with_external():
-    bottom_force = -5e8
+    bottom_force = -5e7
     x, y, simplices = load_mat('data.mat')
     mask1 = x == np.amin(x)
     vals1 = 0
@@ -174,6 +174,13 @@ def ex_with_external():
     fig, ax = plt.subplots()
     ax.triplot(x, y, simplices, color='r')
     ax.triplot(x_new, y_new, simplices, color='b')
+
+    triangles_before = mesh.all_triangles(simplices, x, y)
+    triangles_after = mesh.all_triangles(simplices, x_new, y_new)
+    area_before = np.sum(fem.calc_areas(triangles_before))
+    area_after = np.sum(fem.calc_areas(triangles_after))
+    print(area_before)
+    print(area_after)
     plt.show()
 
 ex_with_external()
