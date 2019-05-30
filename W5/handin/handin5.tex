@@ -41,7 +41,11 @@ The deformed coordinates can also be expressed as a function of the deformation 
 	\V{x} = \Vg{\Phi}(\V{X}, t), \quad \V{X} = \Vg{\Phi}(\V{X}, 0).
 \end{equation}
 
-In this case we will focus on a homogeneous rectangular bar in two dimensions, whose left side is adhered to a wall, and whose right side experiences a constant traction over its area (or length, rather). We will also consider the quasistatic problem, instead of the dynamic problem. As such we set out to solve for the value $ \Vg{\Phi}(\V{X}, \infty) $, where $ \ddot{\V{x}}=0 $. Further we neglect all body forces, such as gravity. With this, the governing equation becomes:
+In this case we will focus on a homogeneous rectangular bar in two dimensions, whose left side is adhered to a wall, and whose right side experiences a constant traction over its area (or length, rather). We will also consider the quasistatic problem, instead of the dynamic problem. As such we set out to solve for the value $ \Vg{\Phi}(\V{X}, \infty) $, where $ \ddot{\V{x}}=0 $. As such, the spatial coordinates can just be expressed as the sum between the material coordinates and the displacement $ \V{u} $ of the material (which we solve for) due to the traction:
+\begin{equation}\label{key}
+	\V{x} = \V{X} + \V{u}.
+\end{equation}
+Further we neglect all body forces, such as gravity. With this, the governing equation becomes:
 \begin{equation}
 	\grad \D \sigma = 0
 \end{equation}
@@ -122,7 +126,18 @@ Likewise we get $ K = \sum_{e\in \Omega}K^e $ with
 \begin{equation*}
 	K^e = \int_{\Omega_e}(B^e)^T D B^e \ud \Omega.
 \end{equation*}
+Lastly
+
 A thing to note is that this is entirely analogous to the principle of virtual work, which states that the virtual work of a system is equal to 0. The virtual work is in this case the work done by a real force on a virtual displacement.
 
 The real force is just the divergence of the Cauchy stress tensor (or more generally, the force density expressed in the Cauchy momentum equation). Taking the dot product between this and the virtual displacement, and then integrating over the whole system must then equal zero for the principle of virtual work to hold.
+
+
+\section{Experiments}
+All experiments for this week will be performed on a 6 by 2 metre rectangular steel bar. Steel has a Young modulus of $ E = 69\D 10^9 \e{Pa} $ and a Poisson ratio of $ \nu = 0.3 $. 
+
+\subsection{Examining the effects of mesh resolution on the deformation}
+
+\subsection{Examining the incompressibility of steel}
+
 \end{document}
