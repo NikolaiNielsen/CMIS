@@ -30,6 +30,47 @@
 \maketitle
 
 \section{Introduction}
+In this hand-in we focus on solving a linear, elastic deformation for a system, using the finite element method. The governing equation for the system is the Cauchy momentum equation:
+\begin{equation}\label{key}
+	\rho \ddot{\V{x}} = \V{b} + \grad \D \sigma,
+\end{equation}
+where $ \V{x} $ are the deformed (or spatial) coordinates of the material, $ \rho $ is the mass density of the body, $ \V{b} $ is the different body forces acting on the system, and $ \sigma $ is the Cauchy stress tensor. On the boundary we have $ \sigma \V{n} = \V{t} $, where $ \V{t} $ is the surface traction.
+
+The deformed coordinates can also be expressed as a function of the deformation field $ \Phi $, with the undeformed (or material) coordinates being the value of the field at $ t=0 $:
+\begin{equation}\label{key}
+	\V{x} = \Vg{\Phi}(\V{X}, t), \quad \V{X} = \Vg{\Phi}(\V{X}, 0).
+\end{equation}
+
+In this case we will focus on a homogeneous rectangular bar in two dimensions, whose left side is adhered to a wall, and whose right side experiences a constant traction over its area (or length, rather). We will also consider the quasistatic problem, instead of the dynamic problem. As such we set out to solve for the value $ \Vg{\Phi}(\V{X}, \infty) $, where $ \ddot{\V{x}}=0 $. Further we neglect all body forces, such as gravity. With this, the governing equation becomes:
+\begin{equation}\label{key}
+	\grad \D \sigma = 0
+\end{equation}
+Now we perform the regular steps of the finite element method: We multiply the equation by some appropriate trial function $ \V{v} $ and then integrate over the volume of the system:
+\begin{equation}\label{key}
+	\int_{\Omega} (\grad \D \sigma) \D \V{v} \ud \Omega = 0
+\end{equation}
+Next we use the product rule for divergence of tensors to split the integral in two:
+\begin{align}\label{key}
+	\int_{\Omega} (\grad \D \sigma) \D \V{v} \ud \Omega = \int_{\Omega} \grad \D (\sigma \V{v}) \ud \Omega - \int_{\Omega} \sigma : \grad \V{v}^T \ud \Omega = 0
+\end{align}
+Using Gauss' theorem for divergence on the first integral gives us:
+\begin{align}
+	\int_{\Omega} \grad \D (\sigma \V{v}) \ud \Omega &= \int_{\partial \Omega} (\sigma \V{v}) \D \V{n} \ud S \\
+	&= \int_{\partial \Omega} \V{v} \D (\sigma \V{n}) \ud S = \int_{\partial \Omega} \V{v} \D \V{t} \ud S
+\end{align}
+In the second integral we leverage the fact that $ \sigma $ is symmetric to write:
+\begin{align}\label{key}
+	\int_{\Omega} \sigma : \grad \V{v}^T \ud \Omega &= \int_{\Omega} \sigma : \grad \V{v} \ud \Omega \\
+	&= \int_{\Omega} \sigma : \frac{1}{2} (\grad \V{v} + \grad \V{v}^T) \ud \Omega
+\end{align}
+Now we choose our trial function to be a virtual displacement $ \delta \V{u} $ of the system.  This can be written, as in last week, as the product of our trusty barycentric coordinates $ N^e $ for the triangular elements, and a virtual displacement $ \delta\V{u}^e $ for each element:
+\begin{equation}\label{key}
+	\V{v} = \delta \V{u} = N^e \delta\V{u}^e
+\end{equation}
+where the barycentric coordinates are written as a $ 2\times 6 $ matrix and the virtual displacement is a 6-component vector:
+\begin{equation}\label{key}
+	N^e = [N_i^e I_2\ N_j^e I_2\ N_k^e I_2], \quad \delta \V{u}^e = [\delta u^e_{i,x} \ \delta u^e_{j,x} \ \cdots \ \delta u^e_{k,y}]
+\end{equation}
 
 
 \end{document}
