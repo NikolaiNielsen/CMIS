@@ -74,27 +74,38 @@ def calc_hat_area(x):
     Returns:
     - A_n (n,) area per node
     """
+    # Get the permutations to sort and unsort x, just incase it isn't sorted
+    perm = np.argsort(x)
+    inv_perm = np.arange(perm.size)[np.argsort(perm)]
+
+    # sort x
+    x = x[perm]
     le = x[1:] - x[:-1]
     A_n = np.zeros(x.shape)
     A_n[1:] += le
     A_n[:-1] += le
+
+    # unsort and return A_n
+    A_n = A_n[inv_perm]
     return A_n / 2
 
 
 def ex_with_external():
-    bottom_force = -5e5
     x, y, simplices = load_mat('data.mat')
+
+    # Clamp the left side
     mask1 = x == np.amin(x)
     vals1 = 0
+
+    # Get the element matric keyword arguments
     elem_dict = dict(D=STEEL_D)
 
-    # We apply a
+    # We apply a downwards nodal force on the right side
+    bottom_force = -5e7
     mask2 = x == np.amax(x)
     A_n = calc_hat_area(y[mask2])
     vals2 = np.zeros((A_n.size, 2))
-    print(A_n)
     vals2[:,1] =A_n * bottom_force
-    print(vals2)
 
     x_displacement, y_displacement = fem.FEM(x, y, simplices,
                                              create_element_matrix,
