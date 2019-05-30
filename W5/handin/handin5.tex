@@ -31,46 +31,98 @@
 
 \section{Introduction}
 In this hand-in we focus on solving a linear, elastic deformation for a system, using the finite element method. The governing equation for the system is the Cauchy momentum equation:
-\begin{equation}\label{key}
+\begin{equation}
 	\rho \ddot{\V{x}} = \V{b} + \grad \D \sigma,
 \end{equation}
 where $ \V{x} $ are the deformed (or spatial) coordinates of the material, $ \rho $ is the mass density of the body, $ \V{b} $ is the different body forces acting on the system, and $ \sigma $ is the Cauchy stress tensor. On the boundary we have $ \sigma \V{n} = \V{t} $, where $ \V{t} $ is the surface traction.
 
 The deformed coordinates can also be expressed as a function of the deformation field $ \Phi $, with the undeformed (or material) coordinates being the value of the field at $ t=0 $:
-\begin{equation}\label{key}
+\begin{equation}
 	\V{x} = \Vg{\Phi}(\V{X}, t), \quad \V{X} = \Vg{\Phi}(\V{X}, 0).
 \end{equation}
 
 In this case we will focus on a homogeneous rectangular bar in two dimensions, whose left side is adhered to a wall, and whose right side experiences a constant traction over its area (or length, rather). We will also consider the quasistatic problem, instead of the dynamic problem. As such we set out to solve for the value $ \Vg{\Phi}(\V{X}, \infty) $, where $ \ddot{\V{x}}=0 $. Further we neglect all body forces, such as gravity. With this, the governing equation becomes:
-\begin{equation}\label{key}
+\begin{equation}
 	\grad \D \sigma = 0
 \end{equation}
 Now we perform the regular steps of the finite element method: We multiply the equation by some appropriate trial function $ \V{v} $ and then integrate over the volume of the system:
-\begin{equation}\label{key}
+\begin{equation}
 	\int_{\Omega} (\grad \D \sigma) \D \V{v} \ud \Omega = 0
 \end{equation}
 Next we use the product rule for divergence of tensors to split the integral in two:
-\begin{align}\label{key}
+\begin{align*}
 	\int_{\Omega} (\grad \D \sigma) \D \V{v} \ud \Omega = \int_{\Omega} \grad \D (\sigma \V{v}) \ud \Omega - \int_{\Omega} \sigma : \grad \V{v}^T \ud \Omega = 0
-\end{align}
+\end{align*}
 Using Gauss' theorem for divergence on the first integral gives us:
 \begin{align}
-	\int_{\Omega} \grad \D (\sigma \V{v}) \ud \Omega &= \int_{\partial \Omega} (\sigma \V{v}) \D \V{n} \ud S \\
-	&= \int_{\partial \Omega} \V{v} \D (\sigma \V{n}) \ud S = \int_{\partial \Omega} \V{v} \D \V{t} \ud S
+	\int_{\Omega} \grad \D (\sigma \V{v}) \ud \Omega &= \int_{\partial \Omega} (\sigma \V{v}) \D \V{n} \ud S\nonumber \\
+	&= \int_{\partial \Omega} \V{v} \D (\sigma \V{n}) \ud S = \int_{\partial \Omega} \V{v} \D \V{t} \ud S \label{eq:boundary}
 \end{align}
 In the second integral we leverage the fact that $ \sigma $ is symmetric to write:
-\begin{align}\label{key}
-	\int_{\Omega} \sigma : \grad \V{v}^T \ud \Omega &= \int_{\Omega} \sigma : \grad \V{v} \ud \Omega \\
-	&= \int_{\Omega} \sigma : \frac{1}{2} (\grad \V{v} + \grad \V{v}^T) \ud \Omega
+\begin{align}
+	\int_{\Omega} \sigma : \grad \V{v}^T \ud \Omega &= \int_{\Omega} \sigma : \grad \V{v} \ud \Omega \nonumber\\
+	&= \int_{\Omega} \sigma : \frac{1}{2} (\grad \V{v} + \grad \V{v}^T) \ud \Omega \label{eq:euler_strain_1}
 \end{align}
 Now we choose our trial function to be a virtual displacement $ \delta \V{u} $ of the system.  This can be written, as in last week, as the product of our trusty barycentric coordinates $ N^e $ for the triangular elements, and a virtual displacement $ \delta\V{u}^e $ for each element:
-\begin{equation}\label{key}
+\begin{equation*}
 	\V{v} = \delta \V{u} = N^e \delta\V{u}^e
-\end{equation}
+\end{equation*}
 where the barycentric coordinates are written as a $ 2\times 6 $ matrix and the virtual displacement is a 6-component vector:
-\begin{equation}\label{key}
+\begin{equation*}
 	N^e = [N_i^e I_2\ N_j^e I_2\ N_k^e I_2], \quad \delta \V{u}^e = [\delta u^e_{i,x} \ \delta u^e_{j,x} \ \cdots \ \delta u^e_{k,y}]
+\end{equation*}
+With this choice of trial function we recognise the right hand side tensor in eq \ref{eq:euler_strain_1} as the virtual form of the Euler strain tensor $ \delta \varepsilon $, giving us:
+\begin{equation*}
+	\int_{\Omega} \sigma : \frac{1}{2} (\grad \V{v} + \grad \V{v}^T) \ud \Omega = \int_{\Omega} \sigma : \delta \varepsilon \ud \Omega
+\end{equation*}
+Now, since both $ \sigma  $ and $ \delta \varepsilon $ are symmetric rank 2 tensors in two dimensions, we might as well write the double contraction between them, as the dot product of two 3-component vectors (where the first two components are their diagonal elements, and the last component is the off diagonal element).
+
+Next we use the fact that strain can be written as a product of a differential operator and a displacement:
+\begin{equation*}
+	\Vg{\varepsilon} = S \V{u} = S N^e \V{u}^e = B^e \V{u}^e
+\end{equation*}
+where $ \V{u} $ is the displacement and $ S $ is the $ 3\times 2 $ differential operator
+\begin{equation*}
+	S = \begin{pmatrix}
+	\partial_x & 0 \\ 0 & \partial_y \\ \partial_y & \partial_x
+	\end{pmatrix}
+\end{equation*}
+which makes $ B^e $ a $ 3 \times 6 $ matrix:
+\begin{equation*}
+	B^e = \begin{pmatrix}
+	\partial_x N^e_i & 0 & \partial_x N^e_j &0 & \partial_x N^e_k & 0 \\
+	0 & \partial_y N^e_i & 0 & \partial_y N^e_j &0 & \partial_y N^e_k \\
+	\partial_y N^e_i & \partial_x N^e_i & \partial_y N^e_j & \partial_x N^e_j & \partial_y N^e_k & \partial_x N^e_k
+	\end{pmatrix}
+\end{equation*}
+This of course also applies to the virtual strain: $ \delta \Vg{\varepsilon} = B^e \delta \V{u}^e $. Likewise, the stress tensor can (in linear elastic deformation) be written as the product between the elasticity matrix and the strain $ \Vg{\sigma} = D \Vg{\varepsilon} $, with the elasticity matrix for a 2D system being
+\begin{equation*}
+	D = \frac{E}{1- \nu^2} \begin{pmatrix}
+	1 & \nu & 0 \\ \nu & 1 & 0 \\ 0 & 0 & \frac{1-\nu}{2}
+	\end{pmatrix}
+\end{equation*}
+where $ E $ is Youngs modulus and $ \nu $ is the Poisson ratio. Putting everything together we have:
+\begin{align*}
+	\int_{\Omega} \sigma : \delta \varepsilon \ud \Omega &= \int_{\Omega} \Vg{\sigma}^T\delta \Vg{\varepsilon} \ud \Omega \\
+	&= \int_{\Omega} \delta \Vg{\varepsilon}^T \Vg{\sigma}  \ud \Omega \\
+	&=  \int_{\Omega}(\delta \Vg{u}^e)^T  (B^e)^T D B^e \V{u}^e \ud \Omega.
+\end{align*}
+For a final equation of the form:
+\begin{equation}
+	(\delta \Vg{u}^e)^T \pp{\int_{\Omega} (B^e)^T D B^e \V{u}^e \ud \Omega - \int_{\partial \Omega} (N^e)^T \V{t}\ud S} = 0
 \end{equation}
+which as usual must hold for all virtual displacements. Giving us the familiar FEM equation $ K \V{u} = f $.
+ 
+The boundary integral $ f $ can be computed for our case of a constant traction $ \V{t} $. The elements on the boundary of the system are just line segments, so the shape functions are just the hat functions from last week, and the integral over these are just one half times the segment length.
+\begin{align*}
+	f &= \int_{\partial\Omega} (N^e)^T \V{t} \ud S = \sum_{e \in \partial \Omega} f^e, \\
+	f^e &= \int_{\partial \Omega^e} (N^e)^T \V{t} \ud S = \frac{1}{2} \ell^e \V{t}.
+\end{align*}
+Likewise we get $ K = \sum_{e\in \Omega}K^e $ with 
+\begin{equation*}
+	K^e = \int_{\Omega_e}(B^e)^T D B^e \ud \Omega.
+\end{equation*}
+A thing to note is that this is entirely analogous to the principle of virtual work, which states that the virtual work of a system is equal to 0. The virtual work is in this case the work done by a real force on a virtual displacement.
 
-
+The real force is just the divergence of the Cauchy stress tensor (or more generally, the force density expressed in the Cauchy momentum equation). Taking the dot product between this and the virtual displacement, and then integrating over the whole system must then equal zero for the principle of virtual work to hold.
 \end{document}
