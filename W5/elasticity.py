@@ -13,7 +13,7 @@ np.set_printoptions(threshold=np.inf)
 def D(E=69e9, nu=0.3):
     """
     Returns the Elasticity matrix "D" for a given Young Modulus "E" and Poisson
-    ratio "nu".
+    ratio "nu".  Defaults are for steel.
     """
     return E/(1-nu*nu) * np.array([[1, nu, 0],[nu, 1, 0],[0, 0, (1-nu)/2]])
 
@@ -62,15 +62,39 @@ def func_source(tri):
     return 0
 
 
+def calc_hat_area(x):
+    """
+    Calculates the sum of integrals of hat functions for a list of points:
+    The integral is just 1/2 l_e, where l_e is the length of the element. But
+    inner nodes have contributions from two elements, so we add these twice
+
+    Inputs:
+    - x, (n,) array of positions
+
+    Returns:
+    - A_n (n,) area per node
+    """
+    le = x[1:] - x[:-1]
+    A_n = np.zeros(x.shape)
+    A_n[1:] += le
+    A_n[:-1] += le
+    return A_n / 2
+
+
 def ex_with_external():
-    bottom_force = -5e7
+    bottom_force = -5e5
     x, y, simplices = load_mat('data.mat')
     mask1 = x == np.amin(x)
     vals1 = 0
     elem_dict = dict(D=STEEL_D)
 
-    mask2 = (x == np.amax(x)) * (y == np.amin(y))
-    vals2 = [0, bottom_force]
+    # We apply a
+    mask2 = x == np.amax(x)
+    A_n = calc_hat_area(y[mask2])
+    vals2 = np.zeros((A_n.size, 2))
+    print(A_n)
+    vals2[:,1] =A_n * bottom_force
+    print(vals2)
 
     x_displacement, y_displacement = fem.FEM(x, y, simplices,
                                              create_element_matrix,
@@ -90,3 +114,5 @@ def ex_with_external():
     print(area_before)
     print(area_after)
     plt.show()
+
+ex_with_external()
