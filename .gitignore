@@ -15,6 +15,8 @@ TexTemplate/*
 
 # No compiled python files
 *.pyc
+# No numpy binary arrays
+*.npy
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
