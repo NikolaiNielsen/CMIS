@@ -307,35 +307,127 @@ def ex_load(min_load=0, max_load=-5e7, num=100, max_area=0.01):
                                    elem_dict=elem_dict)
     f = fem.create_f_vector(x, y, simplices, func_source)
     K, f = fem.add_point_boundary(K, f, mask1, vals1)
-    bar = Bar('Simulating', max=num)
+    # bar = Bar('Simulating', max=num)
     for i, load in enumerate(loads):
         vals = vals2*load
+        f = fem.create_f_vector(x, y, simplices, func_source)
         f = fem.add_to_source(f, mask2, vals)
         u = np.linalg.solve(K, f)
         x_disp, y_disp = fem.unpack_u(u)
         x_new = x + x_disp
         y_new = y + y_disp
         triangles = mesh.all_triangles(simplices, x_new, y_new)
-        areas[i] = np.sum(fem.calc_areas(triangles))
+        area = np.sum(fem.calc_areas(triangles))
+        areas[i] = area
         np.save(savefile, [loads, areas])
-        bar.next()
-    bar.finish()
+        # bar.next()
+    # bar.finish()
 
 
 def ex_analyze_loads():
     loads, areas = np.load('loads.npy')
     start_area = 12
     res = areas - start_area
+    # print(res)
     ratio = res/start_area
-
+    # print(ratio)
+    i = 10
+    exponent = (np.log(ratio[-1])-np.log(ratio[i]))/(np.log(-loads[-1])-np.log(-loads[i]))
+    print(exponent)
     fig, ax = plt.subplots(figsize=(7, 3))
-    ax.plot(loads, ratio)
+    ax.plot(-loads, ratio)
+    # ax.scatter(loads[[i, -1]], areas[])
     ax.set_xlabel('Traction [N/m]')
     ax.set_ylabel('Relative area increase')
-    ax.set_yscale('log')
+    # ax.set_yscale('log')
+    # ax.set_xscale('log')
     ax.set_title('Relative area increase as function of traction')
     fig.tight_layout()
     fig.savefig('handin/ex_loads.pdf')
 
-ex_analyze_resolution()
-ex_analyze_loads()
+
+def ex_show_loads():
+    contour = [np.array([[0, 0], [6, 0], [6, 2], [0, 2]])]
+    x, y, simplices = mesh.generate_and_import_mesh(contour,
+                                                    max_area=0.01)
+
+
+    load = -5e7
+
+    mask1 = x == np.amin(x)
+    vals1 = 0
+
+    # Get the element matric keyword arguments
+    elem_dict = dict(D=STEEL_D)
+
+    # We apply a downwards nodal force on the right side
+    mask2 = x == np.amax(x)
+    A_n = calc_hat_area(y[mask2])
+    vals2 = np.zeros((A_n.size, 2))
+    vals2[:, 1] = A_n
+
+    K = fem.assemble_global_matrix(x, y, simplices, create_element_matrix,
+                                   elem_dict=elem_dict)
+    f = fem.create_f_vector(x, y, simplices, func_source)
+    K, f = fem.add_point_boundary(K, f, mask1, vals1)
+    vals = vals2*load
+    f = fem.add_to_source(f, mask2, vals)
+    u = np.linalg.solve(K, f)
+    x_disp, y_disp = fem.unpack_u(u)
+    x_new = x + x_disp
+    y_new = y + y_disp
+    fig, ax = plt.subplots()
+    ax.triplot(x,y,simplices)
+    ax.triplot(x_new, y_new, simplices)
+    triangles = mesh.all_triangles(simplices, x_new, y_new)
+    area = np.sum(fem.calc_areas(triangles))
+    print(area)
+    plt.show()
+
+
+def ex_squares():
+    poissons = [0.1, 0.3, 0.5]
+    max_areas = [1, 0.1, 0.01]
+    contour = [np.array([[0, 0], [6, 0], [6, 2], [0, 2]])]
+    save_file = 'squares'
+    poissons2, max_areas2 = np.meshgrid(poissons, max_areas)
+
+    num = 100
+    min_load = 0
+    max_load = -5e7
+    areas = np.zeros((num, *poissons2.shape))
+    loads = np.linspace(min_load, max_load, num=num)
+    bar = Bar('simulating', max=areas.size)
+    for i in range(poissons2.shape[0]):
+        for j in range(poissons2.shape[1]):
+            x, y, simplices = mesh.generate_and_import_mesh(
+                contour, max_area=max_areas2[i,j])
+            elem_dict = dict(D=D(nu=poissons2[i,j]))
+            mask1 = x == np.amin(x)
+            vals1 = 0
+            # We apply a downwards nodal force on the right side
+            mask2 = x == np.amax(x)
+            A_n = calc_hat_area(y[mask2])
+            vals2 = np.zeros((A_n.size, 2))
+            vals2[:, 1] = A_n
+
+            K = fem.assemble_global_matrix(x, y, simplices,
+                                           create_element_matrix,
+                                           elem_dict=elem_dict)
+            f = fem.create_f_vector(x, y, simplices, func_source)
+            K, f = fem.add_point_boundary(K, f, mask1, vals1)
+            # bar = Bar('Simulating', max=num)
+            for n, load in enumerate(loads):
+                vals = vals2*load
+                f = fem.create_f_vector(x, y, simplices, func_source)
+                f = fem.add_to_source(f, mask2, vals)
+                u = np.linalg.solve(K, f)
+                x_disp, y_disp = fem.unpack_u(u)
+                x_new = x + x_disp
+                y_new = y + y_disp
+                triangles = mesh.all_triangles(simplices, x_new, y_new)
+                area = np.sum(fem.calc_areas(triangles))
+                areas[n,i,j] = area
+                np.save(save_file, areas)
+                bar.next()
+    bar.finish()
