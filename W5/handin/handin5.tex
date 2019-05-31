@@ -118,10 +118,10 @@ For a final equation of the form:
 which as usual must hold for all virtual displacements. Giving us the familiar FEM equation $ K \V{u} = f $.
  
 The boundary integral $ f $ can be computed for our case of a constant traction $ \V{t} $. The elements on the boundary of the system are just line segments, so the shape functions are just the hat functions from last week, and the integral over these are just one half times the segment length.
-\begin{align*}
-	f &= \int_{\partial\Omega} (N^e)^T \V{t} \ud S = \sum_{e \in \partial \Omega} f^e, \\
-	f^e &= \int_{\partial \Omega^e} (N^e)^T \V{t} \ud S = \frac{1}{2} \ell^e \V{t}.
-\end{align*}
+\begin{align}
+	f &= \int_{\partial\Omega} (N^e)^T \V{t} \ud S = \sum_{e \in \partial \Omega} f^e, \nonumber \\
+	f^e &= \int_{\partial \Omega^e} (N^e)^T \V{t} \ud S = \frac{1}{2} \ell^e \V{t}. \label{eq:boundary_elem} 
+\end{align}
 Likewise we get $ K = \sum_{e\in \Omega}K^e $ with 
 \begin{equation*}
 	K^e = \int_{\Omega_e}(B^e)^T D B^e \ud \Omega.
@@ -139,12 +139,54 @@ All experiments for this week will be performed on a 6 by 2 metre rectangular st
 \begin{figure}
 	\centering
 	\includegraphics[width=\linewidth]{ex_resolution.pdf}
+	\caption{Growth in area and displacement of the bottom right corner node, both plotted as a function of the maximum triangle area. Note the logarithmic scale on the first axis. Also shown is the deformation of the first and last mesh. Minimum angle argument set to 0, and a constant traction of $ 5\D 10^7 $ N/m was used for all simulations.}
+	\label{fig:resolution}
 \end{figure}
+For the first experiment we test the effects of mesh resolution on the deformation of the steel bar. We set a constant traction of $ t = 5\D 10^7 $ N/m for a common point of reference between simulations. To vary the mesh resolution we pass a \texttt{.poly} file to \texttt{Triangle} with just the four corners of the bar, and lines between them, but vary the max area parameter. We perform the simulation for 50 logarithmically spaced numbers (base 2) between 2 $ \e{m}^2 $ and 0.001 $ \e{m}^2 $. For each simulation we record the difference in area between the initial and final state, along with the displacement for the lower right corner node.
+
+We have chosen these measures for a couple of reasons: We want to evaluate whether an increase in mesh resolution will lead to a convergence upon the ``true'' value of the deformation. As such, if we want to measure the deformation, we either have to perform take some average over displacements, or just look at a single node, shared between systems. The latter is of course much easier to implement, and well behaved no matter the mesh resolution. Only four nodes are shared amongst the different meshes, namely the corners, two of which are clamped to the wall. We could of course just as well have chosen the top right node, as this would also deform, but the bottom right felt like the ``natural'' choice.
+
+As for the area: It was an easy measure to implement, and sure enough, produces interesting results.
+
+We expect to see convergence for both measures as the max triangle area decreases, as this increases the number of nodes and elements, and will therefore more closely model the real world (this is of course assuming the meshes generated are of sufficient quality)
+
+The results of the experiment can be seen in figure \ref{fig:resolution}. Sure enough, the displacement of the lower right node settles towards some value as the max triangle area decreases. The same thing applies for the area of the bar, though we see a peculiar thing: one might expect the growth in area to end at a low value, not increase! It does however seem to converge upon a value, so it might just be, that this increase in area is precisely what the linear elastic deformation model predicts for a steel bar.
+
+In the figure we have also included plots of the spatial (green) and material (blue) coordinates for the first and last mesh. The increase in displacement for the lower right node is indeed apparent from these plots as well.
 
 
 \subsection{Examining the incompressibility of steel}
 \begin{figure}
 	\centering
 	\includegraphics[width=\linewidth]{ex_loads.pdf}
+	\caption{Relative area increase as a function of the traction. A mesh with max triangle area of $ 0.01 \e{m}^2 $ is used.}
+	\label{fig:loads}
 \end{figure}
+Normally, as stated before, we would not expect steel to increase in volume/area as it experiences stresses, but the model seems to predict this. Next we perform the simulation for a range of different loads: 100 linearly spaced values between 0 and $ 5\times 10^7 $. We also choose a mesh with max triangle area 0.01 $ \e{m}^2 $. We record the area of the bar after each of the simulations, and calculate the relative area increase of the $ i $'th simulation as $ (A_i-A_0)/A_0 $. The results are seen in figure \ref{fig:loads}. We see an increase in area as indicated in the simulation before. It seems to scale like a parabola, and a look at the plot on a log-log scale reveals a strikingly linear relation between the load and relative area increase (see figure \ref{fig:logloads})
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{ex_logloads.pdf}
+	\caption{Figure \ref{fig:loads} but for a log-log scale.}
+	\label{fig:logloads}
+\end{figure}
+Calculating the slope is done by computing the rise over run of the values in the log-log plot:
+\begin{equation}\label{key}
+	\text{slope} = \frac{\log A_i - \log A_j}{\log t_i - \log t_j}
+\end{equation}
+for $ i > j $. We choose $ i=100, j=10 $, giving a slope of the log-log plot of 2.0019. So it is to a good approximation a parabola. Let us see, if we can make sense of it:
+
+All non-zero values in $ f $ are the ones corresponding to nodes that experience traction, and since these values, per eq \ref{eq:boundary_elem}, scale linearly with the traction, we expect the displacement to also scale linearly since
+\begin{equation}\label{key}
+	Ax=b \Rightarrow x = A\inverse b, \quad Ax' = 2b \Rightarrow x'=2A\inverse b = 2x
+\end{equation}
+Now, area scales as the square of length, so a linear increase in the displacement might well induce a quadratic increase in the relative area (which of course is directly proportional to the absolute area). Of course, this is all post-hoc hypotheses based on hand-wavy arguments. To ascertain this one might more reasonably do a mathematical analysis on the increase in area as function of displacement, but I am a physicist, so I prefer doing this experimentally.
+
+To do this experimentally, we need to vary as many different parameters as possible (one at a time, of course) and see if the effect still occurs. If it does, it is a strong hint in the direction of a quadratic relationship between the displacement and final area of the bar.
+
+In this model we have essentially three different parameters to change: The Young modulus of the material, the Poisson ratio, and the resolution of the mesh. The Young modulus appears as a scale factor on the elasticity matrix $ D $, and as such, the displacement and Young modulus are inversely proportional:
+\begin{equation}\label{key}
+	Ax=b \Rightarrow x = A\inverse b, \quad 2Ax' = b \Rightarrow x'=A\inverse b/2 = x/2
+\end{equation}
+This leaves the Poisson ratio and the mesh resolution. We choose 3 different values of the Poisson ratio and 3 different values of the max triangle area, and compute the relative area increase for the same range of tractions, for each set of parameter values. We then plot these on a log-log plot, which is seen in figure \textbf{REF}
+
 \end{document}
