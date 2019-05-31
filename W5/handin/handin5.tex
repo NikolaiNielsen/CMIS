@@ -133,7 +133,14 @@ The real force is just the divergence of the Cauchy stress tensor (or more gener
 
 
 \section{Experiments}
-All experiments for this week will be performed on a 6 by 2 metre rectangular steel bar. Steel has a Young modulus of $ E = 69\D 10^9 \e{Pa} $ and a Poisson ratio of $ \nu = 0.3 $. 
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{raw.pdf}
+	\caption{Deformation of a steel bar. Max triangle area is 0.1 m$ ^2 $. Traction $ t = 5\D10^2 $. The material coordinates is shown in red, whilst the spatial coordinates are shown in blue.}
+	\label{fig:raw}
+\end{figure}
+All experiments for this week will be performed on a 6 by 2 metre rectangular steel bar. Steel has a Young modulus of $ E = 69\D 10^9 \e{Pa} $ and a Poisson ratio of $ \nu = 0.3 $. The solution for a sample grid with traction $ t=5\D 10^8 $ N/m is seen in figure \ref{fig:raw}, and sure enough, the bar is deformed downwards on the right side, whilst the left stays put - just as expected.
+
 
 \subsection{Examining the effects of mesh resolution on the deformation}
 \begin{figure}
@@ -170,23 +177,33 @@ Normally, as stated before, we would not expect steel to increase in volume/area
 	\label{fig:logloads}
 \end{figure}
 Calculating the slope is done by computing the rise over run of the values in the log-log plot:
-\begin{equation}\label{key}
+\begin{equation}\label{eq:slope}
 	\text{slope} = \frac{\log A_i - \log A_j}{\log t_i - \log t_j}
 \end{equation}
-for $ i > j $. We choose $ i=100, j=10 $, giving a slope of the log-log plot of 2.0019. So it is to a good approximation a parabola. Let us see, if we can make sense of it:
+for $ i > j $. We choose $ i=100, j=20 $, giving a slope of the log-log plot of 2.0012. So it is to a good approximation a parabola. Let us see, if we can make sense of it:
 
 All non-zero values in $ f $ are the ones corresponding to nodes that experience traction, and since these values, per eq \ref{eq:boundary_elem}, scale linearly with the traction, we expect the displacement to also scale linearly since
-\begin{equation}\label{key}
+\begin{equation*}\label{key}
 	Ax=b \Rightarrow x = A\inverse b, \quad Ax' = 2b \Rightarrow x'=2A\inverse b = 2x
-\end{equation}
+\end{equation*}
 Now, area scales as the square of length, so a linear increase in the displacement might well induce a quadratic increase in the relative area (which of course is directly proportional to the absolute area). Of course, this is all post-hoc hypotheses based on hand-wavy arguments. To ascertain this one might more reasonably do a mathematical analysis on the increase in area as function of displacement, but I am a physicist, so I prefer doing this experimentally.
 
 To do this experimentally, we need to vary as many different parameters as possible (one at a time, of course) and see if the effect still occurs. If it does, it is a strong hint in the direction of a quadratic relationship between the displacement and final area of the bar.
 
+\begin{figure*}
+	\centering
+	\includegraphics[width=\linewidth]{squares.pdf}
+	\caption{log-log plots of traction and relative area increase, for different values of the Poisson ratio $ \nu $ and max triangle size $ A^e $. The two points shown are the ones for which the slope is calculated ($ i $=100, $ j $=20 in eq \ref{eq:slope}).}
+	\label{fig:squares}
+\end{figure*}
 In this model we have essentially three different parameters to change: The Young modulus of the material, the Poisson ratio, and the resolution of the mesh. The Young modulus appears as a scale factor on the elasticity matrix $ D $, and as such, the displacement and Young modulus are inversely proportional:
-\begin{equation}\label{key}
+\begin{equation*}\label{key}
 	Ax=b \Rightarrow x = A\inverse b, \quad 2Ax' = b \Rightarrow x'=A\inverse b/2 = x/2
-\end{equation}
-This leaves the Poisson ratio and the mesh resolution. We choose 3 different values of the Poisson ratio and 3 different values of the max triangle area, and compute the relative area increase for the same range of tractions, for each set of parameter values. We then plot these on a log-log plot, which is seen in figure \textbf{REF}
+\end{equation*}
+This leaves the Poisson ratio and the mesh resolution. We choose 3 different values of the Poisson ratio (0.1, 0.3, 0.5) and 3 different values of the max triangle area (1, 0.1, 0.01), and compute the relative area increase for the same range of tractions, for each set of parameter values. We then plot these on a log-log plot, which is seen in figure \ref{fig:squares}.
+
+As seen in the figure, the relative area increase does not seem to depend on the Poisson ratio (at least not in this range of Poissons ratio), there is some deviation from the linearity of the log-log plot when varying the max triangle area. But still, for meshes of a decent resolution and up, the relationship between relative area increase and traction seems to be approximately quadratic (for large enough tractions).
+
+Of course, this experiment only samples a small, small portion of the available parameter space, so a finer analysis of the phenomenon is warranted - a larger selection of Poisson ratios and mesh resolutions, and perhaps a proper fitting to a polynomial of some order, to get a better estimate of the relationship.
 
 \end{document}
