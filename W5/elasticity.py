@@ -334,10 +334,11 @@ def ex_analyze_loads():
     res = areas - start_area
     # print(res)
     ratio = res/start_area
-    # print(ratio)
+    for load, rat in zip(loads, ratio):
+        print(load, rat)
     i = 10
     exponent = (np.log(ratio[-1])-np.log(ratio[i]))/(np.log(-loads[-1])-np.log(-loads[i]))
-    print(exponent)
+    # print(exponent)
     fig, ax = plt.subplots(figsize=(7, 3))
     ax.plot(-loads, ratio)
     # ax.scatter(loads[[i, -1]], areas[])
@@ -469,4 +470,4 @@ def ex_analyze_squares():
     fig.savefig('handin/squares.pdf')
 
 
-ex_analyze_resolution()
+ex_analyze_loads()

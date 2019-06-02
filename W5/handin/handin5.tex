@@ -157,9 +157,9 @@ As for the area: It was an easy measure to implement, and sure enough, produces 
 
 We expect to see convergence for both measures as the max triangle area decreases, as this increases the number of nodes and elements, and will therefore more closely model the real world (this is of course assuming the meshes generated are of sufficient quality)
 
-The results of the experiment can be seen in figure \ref{fig:resolution}. Sure enough, the displacement of the lower right node settles towards some value as the max triangle area decreases. The same thing applies for the area of the bar, though we see a peculiar thing: one might expect the growth in area to end at a low value, not increase! It does however seem to converge upon a value, so it might just be, that this increase in area is precisely what the linear elastic deformation model predicts for a steel bar.
+The results of the experiment can be seen in figure \ref{fig:resolution}. Sure enough, the displacement of the lower right node settles towards some value as the max triangle area decreases. The same thing applies for the area of the bar, though we see a peculiar thing: one might expect the growth in area to end at a low value, not increase! It does however seem to converge upon a value, so it might just be, that this increase in area is precisely what the linear elastic deformation model predicts for a steel bar. However, what we have done here is just validation - we have not performed any verification on the experiment. And in the real world deformation is only linear in a narrow range of stresses, whilst we brazenly assume it to hold for all stresses.
 
-In the figure we have also included plots of the spatial (green) and material (blue) coordinates for the first and last mesh. The increase in displacement for the lower right node is indeed apparent from these plots as well.
+To test for how long the linearity holds we can perform the experiment for a range of loads and test where the area increase exceeds some threshold.
 
 
 \subsection{Examining the incompressibility of steel}
@@ -169,7 +169,10 @@ In the figure we have also included plots of the spatial (green) and material (b
 	\caption{Relative area increase as a function of the traction. A mesh with max triangle area of $ 0.01 \e{m}^2 $ is used.}
 	\label{fig:loads}
 \end{figure}
-Normally, as stated before, we would not expect steel to increase in volume/area as it experiences stresses, but the model seems to predict this. Next we perform the simulation for a range of different loads: 100 linearly spaced values between 0 and $ 5\times 10^7 $. We also choose a mesh with max triangle area 0.01 $ \e{m}^2 $. We record the area of the bar after each of the simulations, and calculate the relative area increase of the $ i $'th simulation as $ (A_i-A_0)/A_0 $. The results are seen in figure \ref{fig:loads}. We see an increase in area as indicated in the simulation before. It seems to scale like a parabola, and a look at the plot on a log-log scale reveals a strikingly linear relation between the load and relative area increase (see figure \ref{fig:logloads})
+Normally, as stated before, we would not expect steel to increase in volume/area as it experiences stresses, but the model seems to predict this. Next we perform the simulation for a range of different loads: 100 linearly spaced values between 0 and $ 5\times 10^7 $. We also choose a mesh with max triangle area 0.01 $ \e{m}^2 $. We record the area of the bar after each of the simulations, and calculate the relative area increase of the $ i $'th simulation as $ (A_i-A_0)/A_0 $. The results are seen in figure \ref{fig:loads}.
+We see an increase in area as indicated in the simulation before, and to have a relative increase below, say $ 10^{-5} $ we can have a traction no greater than roughly $ t=5\D 10^6 $ N/m, for steel.
+
+A peculiar phenomenon occurs, though: the relative area increase seems to scale like a parabola, and a look at the plot on a log-log scale reveals a strikingly linear relation between the load and relative area increase (see figure \ref{fig:logloads})
 \begin{figure}
 	\centering
 	\includegraphics[width=\linewidth]{ex_logloads.pdf}
