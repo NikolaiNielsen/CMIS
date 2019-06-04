@@ -28,10 +28,18 @@ def project_to_edge(xi, yi, xj, yj, x, y):
     return px, py
 
 
-def draw_control_volumes(x, y, simplices, CVs, scale):
+def draw_control_volumes(x, y, simplices, cvs, scale=0.5):
 
     fig, ax = plt.subplots()
     ax.triplot(x, y, simplices)
+    for cv in cvs:
+        ax.plot([cv['ox'], cv['dx']], [cv['oy'], cv['dy']], 'r-', linewidth=2)
+        ax.plot(cv['ox'], cv['oy'], '*g', linewidth=2)
+        ax.plot(cv['mx'], cv['my'], '*b', linewidth=2)
+        ax.plot([cv['ox'], scale*cv['ex']+cv['ox']],
+                [cv['oy'], scale*cv['ey']+cv['oy']], '-g', linewidth=2)
+        ax.plot([cv['mx'], scale*cv['nx']+cv['mx']],
+                [cv['my'], scale*cv['ny']+cv['my']], '-g', linewidth=2)
     return fig, ax
 
 
@@ -108,23 +116,24 @@ def calc_incenters(triangles):
     return incenters
 
 
-def calc_for_control(ox, oy, dx, dy):
-    # Calculate stuff for create_control_volumes
-    l = np.sqrt((dx-ox)**2 + (dy-oy)**2)
-    ex = (dx - ox)/l
-    ey = (dy - oy)/l
-    nx = -ey
-    ny = ex
-    mx = (dx + ox)/2
-    my = (dy + oy)/2
-    return l, ex, ey, nx, ny, mx, my
-
 def create_control_volumes(x, y, simplices):
+    def _calc_for_control(ox, oy, dx, dy):
+        # Calculate stuff for create_control_volumes
+        l = np.sqrt((dx-ox)**2 + (dy-oy)**2)
+        ex = (dx - ox)/l
+        ey = (dy - oy)/l
+        nx = -ey
+        ny = ex
+        mx = (dx + ox)/2
+        my = (dy + oy)/2
+        return l, ex, ey, nx, ny, mx, my
+    
     N = x.size
     triangles = mesh.all_triangles(simplices, x, y)
     incenters = calc_incenters(triangles)
     cx, cy = incenters.T
-    hull = spatial.ConvexHull(np.array((x,y)))
+    points = np.array((x,y))
+    hull = spatial.ConvexHull(points.T)
     hull_vertices = hull.vertices
     boundary_mask = np.zeros(N)
     boundary_mask[hull_vertices] = 1
@@ -157,7 +166,7 @@ def create_control_volumes(x, y, simplices):
             oy = y[i]
             dx, dy = project_to_edge(ox, oy, x[jj], y[jj], cx[indices[0]],
                                      cy[indices[0]])
-            l, ex, ey, nx, ny, mx, my = calc_for_control(ox, oy, dx, dy)
+            l, ex, ey, nx, ny, mx, my = _calc_for_control(ox, oy, dx, dy)
 
             I.append(i)
             N.append(-1)
@@ -178,7 +187,7 @@ def create_control_volumes(x, y, simplices):
             oy = dy
             dx = cx[indices[0]]
             dy = cy[indices[0]]
-            l, ex, ey, nx, ny, mx, my = calc_for_control(ox, oy, dx, dy)
+            l, ex, ey, nx, ny, mx, my = _calc_for_control(ox, oy, dx, dy)
 
             I.append(i)
             N.append(jj)
@@ -207,13 +216,13 @@ def create_control_volumes(x, y, simplices):
             o = indices[j]
 
             # Destination vertex index
-            d = indices[j%K + 1]
+            d = indices[(j+1)%K]
 
             ox = cx[o]
             oy = cy[o]
             dx = cx[d]
             dy = cy[d]
-            l, ex, ey, nx, ny, mx, my = calc_for_control(ox, oy, dx, dy)
+            l, ex, ey, nx, ny, mx, my = _calc_for_control(ox, oy, dx, dy)
             I.append(i)
             N.append(kk)
             OX.append(ox)
@@ -231,15 +240,16 @@ def create_control_volumes(x, y, simplices):
 
         
         if boundary_mask[i]:
-            a = simplices[indices[k], 0]
-            b = simplices[indices[k], 1]
-            c = simplices[indices[k], 2]
+            # index -1 corresponds to "K" in matlab code
+            a = simplices[indices[-1], 0]
+            b = simplices[indices[-1], 1]
+            c = simplices[indices[-1], 2]
             ii, jj, kk = find_vertex_order(i, a, b, c)
 
-            ox = cx[indices[K]]
-            oy = cy[indices[K]]
+            ox = cx[indices[-1]]
+            oy = cy[indices[-1]]
             dx, dy = project_to_edge(x[kk], y[kk], x[i], y[i], ox, oy)
-            l, ex, ey, nx, ny, mx, my = calc_for_control(ox, oy, dx, dy)
+            l, ex, ey, nx, ny, mx, my = _calc_for_control(ox, oy, dx, dy)
             I.append(i)
             N.append(kk)
             OX.append(ox)
@@ -259,7 +269,7 @@ def create_control_volumes(x, y, simplices):
             ox = dy
             dx = x[i]
             dy = y[i]
-            l, ex, ey, nx, ny, mx, my = calc_for_control(ox, oy, dx, dy)
+            l, ex, ey, nx, ny, mx, my = _calc_for_control(ox, oy, dx, dy)
             I.append(i)
             N.append(-1)
             OX.append(ox)
@@ -274,29 +284,28 @@ def create_control_volumes(x, y, simplices):
             MX.append(mx)
             MY.append(my)
             code.append(2)
-        cv = {'I':I, 'N':N, 'ox':OX, 'oy':OY, 'dx':DX, 'dy':DY, 'l':L, 'ex':EX,
-              'ey':EY, 'nx':NX, 'ny':NY, 'mx':MX, 'my':MY, 'code':code}
+        cv = {'I':np.array(I),
+              'N':np.array(N),
+              'ox':np.array(OX),
+              'oy':np.array(OY),
+              'dx':np.array(DX),
+              'dy':np.array(DY),
+              'l':np.array(L),
+              'ex':np.array(EX),
+              'ey':np.array(EY),
+              'nx':np.array(NX),
+              'ny':np.array(NY),
+              'mx':np.array(MX),
+              'my':np.array(MY),
+              'code':np.array(code)}
         cvs.append(cv)
     return cvs
-        
-        
-
     
 
 points = np.array([[0, 0], [0, 1.1], [1, 0], [1, 1], [2,2]])
 x, y = points.T
 tri = spatial.Delaunay(points)
 simplices = tri.simplices
-triangles = mesh.all_triangles(simplices, x, y)
-incenters = calc_incenters(triangles)
-hull = spatial.ConvexHull(points)
-fig, ax = plt.subplots()
-# mask = np.c_[np.atleast_2d(hull.vertices), hull.vertices[0]].squeeze()
-# print(mask)
-print(hull.simplices)
-ax.triplot(x,y,simplices)
-ax.scatter(incenters[:,0], incenters[:,1])
-ax.scatter(incenters[3, 0], incenters[3, 1], color='r')
-# ax.plot(x[mask],
-#         y[mask], color='r')
+cvs = create_control_volumes(x, y, simplices)
+fig, ax = draw_control_volumes(x, y, simplices, cvs, scale=0.05)
 plt.show()
