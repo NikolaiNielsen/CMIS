@@ -144,6 +144,17 @@ def find_all_neighbours(simplices, n, include_self=False):
     return unique_verts
 
 
+def find_neighbouring_simplices(simplices, n):
+    """
+    returns a list of indices corresponding to simplices the n'th vertex is a
+    part of.
+    """
+    neighbours = simplices == n
+    neighbour_mask = np.sum(neighbours, axis=1).astype(bool)
+    neighbours = np.arange(neighbour_mask.size)[neighbour_mask]
+    return neighbours
+
+
 def calc_com(vertices, x, y, n, m_max=5):
     """
     Calculates the center of mass (with masses assumed equal), for the input
