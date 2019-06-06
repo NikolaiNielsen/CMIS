@@ -1,0 +1,38 @@
+\documentclass[sigconf]{acmart}
+% defining the \BibTeX command - from Oren Patashnik's original BibTeX documentation.
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08emT\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+% Remove the annoying stuff
+\settopmatter{printacmref=false} % Removes citation information below abstract
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+\pagestyle{plain} % removes running headers
+
+
+
+\usepackage{lipsum}
+
+
+
+
+
+\begin{document}
+
+%
+% The "title" command has an optional parameter, allowing the author to define a "short title" to be used in page headers.
+\title{CMIS Hand-in 6: Finite Volume Method}
+
+\author{Nikolai Plambech Nielsen}
+\email{lpk331@alumni.ku.dk}
+\affiliation{%
+  \institution{Niels Bohr Institute, University of Copenhagen}
+}
+
+
+\maketitle
+
+\section{Finite Volume Method}
+The finite volume method uses the approximation of piecewise integrals to solve a partial differential equation. One takes the governing equation and integrates it over some finite, fixed volume $ V $. Now one can split the volume into several smaller volumes, called \textit{control volumes}. One can then use numerical approximations to evaluate the integral - or at least get a set of linear equations for each control volume. These equations can then be gathered into one matrix and solved for the unknown field.
+
+
+
+
+\end{document}

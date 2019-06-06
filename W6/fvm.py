@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+from matplotlib.patches import Polygon
 from scipy import spatial
+from mpl_toolkits.mplot3d import Axes3D
+import scipy.io as sio
 import sys
 sys.path.append('../useful_functions')
 import mesh
@@ -28,25 +33,100 @@ def project_to_edge(xi, yi, xj, yj, x, y):
     return px, py
 
 
-def draw_control_volumes(x, y, simplices, cvs, scale=0.5):
+def draw_control_volumes(x, y, simplices, cvs, scale=0.05):
 
     fig, ax = plt.subplots()
     ax.triplot(x, y, simplices)
+    i = 1
+    n = 13
     for cv in cvs:
-        ax.plot([cv['ox'], cv['dx']], [cv['oy'], cv['dy']], 'r-', linewidth=2)
-        ax.plot(cv['ox'], cv['oy'], '*g', linewidth=2)
-        ax.plot(cv['mx'], cv['my'], '*b', linewidth=2)
-        ax.plot([cv['ox'], scale*cv['ex']+cv['ox']],
-                [cv['oy'], scale*cv['ey']+cv['oy']], '-g', linewidth=2)
-        ax.plot([cv['mx'], scale*cv['nx']+cv['mx']],
-                [cv['my'], scale*cv['ny']+cv['my']], '-g', linewidth=2)
+        if i == n:
+            ax.plot([cv['ox'], cv['dx']], [cv['oy'], cv['dy']], 'r-',
+                    linewidth=2)
+            ax.plot(cv['ox'], cv['oy'], '*g', linewidth=2)
+            ax.plot(cv['mx'], cv['my'], '*b', linewidth=2)
+            ax.plot([cv['ox'], scale*cv['ex']+cv['ox']],
+                    [cv['oy'], scale*cv['ey']+cv['oy']], '-g', linewidth=2)
+            ax.plot([cv['mx'], scale*cv['nx']+cv['mx']],
+                    [cv['my'], scale*cv['ny']+cv['my']], '-g', linewidth=2)
+        i += 1
+    ax.set_aspect('equal')
+    fig.tight_layout()
     return fig, ax
 
 
-def draw_gradients(x, y, phi):
+def draw_gradients(x, y, simplices, phi):
+
+    xx, yy, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
+
     fig, ax = plt.subplots()
+    ax.contour(xx, yy, C, 20, cmap='hsv')
+    ax.quiver(xx, yy, dx, dy, cmap='hsv')
+    fig.tight_layout()
+    
     return fig, ax
 
+
+def draw_surface(x, y, simplices, phi):
+    xx, yy, phi = calc_phi_on_grid(x, y, simplices, phi)
+
+    fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+    ax.plot_surface(xx, yy, phi, cmap='hsv')
+    fig.tight_layout()
+
+    return fig, ax
+
+
+def draw_strealines(x, y, simplices, phi):
+    xx, yy, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
+    N = 20
+    sx = np.linspace(np.amin(x), np.amax(x), N)
+    sy = np.linspace(np.amin(y), np.amax(y), N)
+    fig, ax = plt.subplots()
+    ax.streamplot(sx, sy, dx, dy)
+    fig.tight_layout()
+    return fig, ax
+
+
+def draw_field(x, y, simplices, phi):
+    fig, ax = plt.subplots()
+    fig.tight_layout()
+    cmap_name = 'greys_r'
+    norm = colors.Normalize(np.amin(phi), np.amax(phi))
+    cmap = cm.ScalarMappable(norm, cmap_name)
+
+    triangles = mesh.all_triangles(simplices, x, y)
+    for n, tri in enumerate(triangles):
+        poly = Polygon(tri, facecolor=cmap.to_rgba(phi[n]))
+        ax.add_patch(poly)
+
+    return fig, ax
+
+
+def calc_phi_on_grid(x, y, simplices, phi, gradient=False):
+    x_min = np.amin(x)
+    x_max = np.amax(x)
+    y_min = np.amin(y)
+    y_max = np.amax(y)
+    N = 100
+    X = np.linspace(x_min, x_max, N)
+    Y = np.linspace(y_min, y_max, N)
+
+    xx, yy = np.meshgrid(X, Y)
+    points = np.array((xx.flatten(), xy.flatten()))
+    if points.shape[1] != 2:
+        points = points.T
+    si, bc = point_location(tri, points)
+    phi_i = phi[simplices[si, 0]]
+    phi_j = phi[simplices[si, 1]]
+    phi_k = phi[simplices[si, 2]]
+
+    C = phi_i * bc[:, 0] + phi_j * bc[:, 1] + phi_k * bc[:, 2]
+    C = C.reshape([N, N])
+    if gradient:
+        dx, dy = np.gradient(C)
+        return xx, yy, C, dx, dy
+    return xx, yy, C
 
 def point_location(tri, p):
     """
@@ -166,6 +246,8 @@ def create_control_volumes(x, y, simplices):
             oy = y[i]
             dx, dy = project_to_edge(ox, oy, x[jj], y[jj], cx[indices[0]],
                                      cy[indices[0]])
+            print(f'ox: {ox:.2f}, oy: {oy:.2f}')
+            print(f'dx: {dx:.2f}, dy: {dy:.2f}')
             l, ex, ey, nx, ny, mx, my = _calc_for_control(ox, oy, dx, dy)
 
             I.append(i)
@@ -217,7 +299,7 @@ def create_control_volumes(x, y, simplices):
 
             # Destination vertex index
             d = indices[(j+1)%K]
-
+            # print(f'j: {j}, j mod: {(j+1)%K}')
             ox = cx[o]
             oy = cy[o]
             dx = cx[d]
@@ -300,12 +382,122 @@ def create_control_volumes(x, y, simplices):
               'code':np.array(code)}
         cvs.append(cv)
     return cvs
-    
+
+
+def load_cvs_mat(name):
+    """
+    Loads a .mat file with contents: vertex positions, triangulation matrix and
+    control volume struct
+    """
+    mat = sio.loadmat(name)
+    x = mat['X'].squeeze()
+    y = mat['Y'].squeeze()
+    # Subtract to account for 1-based indexing in Matlab
+    T = mat['T']-1
+    cvs_mat = mat['CVs']
+    cvs = []
+    for c in cvs_mat:
+        keys = ['I', 'N', 'ox', 'oy', 'dx', 'dy', 'l', 'ex', 'ey', 'nx',
+                'ny', 'mx', 'my', 'code']
+        values = c[0][0][0]
+        values = [i.squeeze() for i in values]
+        d = dict(zip(keys, values))
+        # Subtract 1
+        d['I'] = d['I'] - 1
+
+        # But only it it's not -1
+        not_minus_1 = d['N'] != -1
+        d['N'][not_minus_1] = d['N'][not_minus_1] - 1
+        cvs.append(d)
+    return x, y, T, cvs
+
+
+def calc_M(x, y):
+    """
+    Returns the value of M at the point (x,y). M=(0,-1) inside the unit circle,
+    (0,0) outside
+    """
+    M_in = np.array((0,-1))
+    M_out = np.zeros(2)
+    in_ = x**2 + y**2 <= 1
+    return M_in if in_ else M_out
+
+
+def matrix_assembly(x, y, simplices, cvs):
+    N = len(cvs)
+    A = np.zeros((N, N))
+    b = np.zeros(N)
+
+    for n, cv in enumerate(cvs):
+        E = np.size(cv['I'])
+        for e in range(E):
+            keys = ['I', 'N', 'ox', 'oy', 'dx', 'dy', 'l', 'ex', 'ey', 'nx',
+                    'ny', 'mx', 'my', 'code']
+            _, j, ox, oy, dx, dy, l, ex, ey, nx, ny, mx, my, code = [
+                cv[i][e] for i in keys]
+            # e: CV index at start of edge
+            # j: CV index at end of edge
+            # l: length of edge
+            # ox/oy: origin point of edge (x(e), y(e))
+            # dx/dy: destination (x(j), y(j))
+            # mx/my: midpoint of edge
+            # nx/ny: outward normal
+            # ex/ey: edge direction normal
+            Mx, My = calc_M(mx, my)
+
+            if code == 0:
+                # We are inside the domain. Straightforward discretization
+                me = Mx*nx + My*ny
+                b[n] += me*l
+                le = np.sqrt((ox-dx)**2 + (oy-dy)**2)
+                A[n, e] = -l/le
+                A[n, j] = l/le
+
+            elif code == 1:
+                # Edge is coming from inside domain, ends on physical boundary
+                # We must apply special discretization (destination node is on
+                # convex hull)
+                me = Mx*nx + My*ny
+                b[n] += me*l
+                le = np.sqrt((ox-dx)**2 + (oy-dy)**2)
+                A[n, e] = -l/le
+                A[n, j] = l/le
+
+            elif code == 2:
+                # Edge is on physical boundary. Must apply boundary condition
+                pass
+            else:
+                raise Exception('Unrecognized code for vertex')
+    return A, b
 
 points = np.array([[0, 0], [0, 1.1], [1, 0], [1, 1], [2,2]])
 x, y = points.T
 tri = spatial.Delaunay(points)
 simplices = tri.simplices
-cvs = create_control_volumes(x, y, simplices)
-fig, ax = draw_control_volumes(x, y, simplices, cvs, scale=0.05)
+simplices = np.array(([3, 0 ,2],
+                      [3, 2, 4],
+                      [1, 3, 4],
+                      [1, 0, 3]))
+
+x, y, simplices, cvs = load_cvs_mat('control_volumes.mat')
+x = np.squeeze(x)
+y = np.squeeze(y)
+# print(simplices.shape)
+# triangles = mesh.all_triangles(simplices, x, y)
+# incenters = calc_incenters(triangles)
+# hull = spatial.ConvexHull(points)
+# for i in range(x.size):
+#     indices = mesh.find_neighbouring_simplices(simplices, i)
+#     print(indices)
+
+# fig, ax = plt.subplots()
+# ax.triplot(x,y,simplices)
+# plt.show()
+# print(simplices)
+# cvs = create_control_volumes(x, y, simplices)
+fig, ax = draw_control_volumes(x, y, simplices, cvs, 0.05)
 plt.show()
+# for i,cv in enumerate(cvs):
+#     print(f'CV {i}')
+#     for key, value in cv.items():
+#         print(key, value)
