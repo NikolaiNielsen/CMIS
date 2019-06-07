@@ -1,7 +1,7 @@
 function [TR, CVs, Bmask] = create_control_volumes( T, X, Y )
 % Copyright 2012, Kenny Erleben, DIKU
-TR = TriRep(T, X, Y); % Gets all triangle vertex coordinates
-IC = incenters(TR); % incenters. Use barycentric coords and side lengths
+TR = delaunayTriangulation(X, Y); % Gets all triangle vertex coordinates
+IC = incenter(TR); % incenters. Use barycentric coords and side lengths
 CX = IC(:,1);
 CY = IC(:,2);
 

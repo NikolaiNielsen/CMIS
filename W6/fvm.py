@@ -1,4 +1,5 @@
 import numpy as np
+import subprocess
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.colors as colors
@@ -78,7 +79,7 @@ def draw_surface(x, y, simplices, phi):
 
 
 def draw_strealines(x, y, simplices, phi):
-    xx, yy, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
+    _, _, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
     N = 20
     sx = np.linspace(np.amin(x), np.amax(x), N)
     sy = np.linspace(np.amin(y), np.amax(y), N)
@@ -470,31 +471,54 @@ def matrix_assembly(x, y, simplices, cvs):
                 raise Exception('Unrecognized code for vertex')
     return A, b
 
-points = np.array([[0, 0], [0, 1.1], [1, 0], [1, 1], [2,2]])
-x, y = points.T
-tri = spatial.Delaunay(points)
-simplices = tri.simplices
-simplices = np.array(([3, 0 ,2],
-                      [3, 2, 4],
-                      [1, 3, 4],
-                      [1, 0, 3]))
 
-x, y, simplices, cvs = load_cvs_mat('control_volumes.mat')
-x = np.squeeze(x)
-y = np.squeeze(y)
-# print(simplices.shape)
-# triangles = mesh.all_triangles(simplices, x, y)
-# incenters = calc_incenters(triangles)
-# hull = spatial.ConvexHull(points)
-# for i in range(x.size):
-#     indices = mesh.find_neighbouring_simplices(simplices, i)
-#     print(indices)
+def write_to_mat(X, Y):
+    name = 'matlab/points.mat'
+    sio.savemat(name, mdict={'X':X, 'Y':Y})
 
-# fig, ax = plt.subplots()
-# ax.triplot(x,y,simplices)
-# plt.show()
-# print(simplices)
-# cvs = create_control_volumes(x, y, simplices)
+
+def call_matlab(print_=False):
+    cmd_name = "run('matlab/process_data.m');exit;"
+    args = f'-nodisplay -nosplash -nodesktop -r "{cmd_name}"'
+    cmd = ['matlab', args]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    if print_:
+        for line in p.stdout:
+            print(line.decode('utf-8'), end='')
+    p.wait()
+    if print_:
+        print(p.returncode)
+
+
+
+# points = np.array([[0, 0], [0, 1.1], [1, 0], [1, 1], [2,2]])
+# x, y = points.T
+# tri = spatial.Delaunay(points)
+# simplices = tri.simplices
+# simplices = np.array(([3, 0 ,2],
+#                       [3, 2, 4],
+#                       [1, 3, 4],
+#                       [1, 0, 3]))
+
+# x, y, simplices, cvs = load_cvs_mat('control_volumes2.mat')
+# write_to_mat(x, y)
+call_matlab()
+x, y, simplices, cvs = load_cvs_mat('matlab/control_volumes.mat')
+# x = np.squeeze(x)
+# y = np.squeeze(y)
+# # print(simplices.shape)
+# # triangles = mesh.all_triangles(simplices, x, y)
+# # incenters = calc_incenters(triangles)
+# # hull = spatial.ConvexHull(points)
+# # for i in range(x.size):
+# #     indices = mesh.find_neighbouring_simplices(simplices, i)
+# #     print(indices)
+
+# # fig, ax = plt.subplots()
+# # ax.triplot(x,y,simplices)
+# # plt.show()
+# # print(simplices)
+# # cvs = create_control_volumes(x, y, simplices)
 fig, ax = draw_control_volumes(x, y, simplices, cvs, 0.05)
 plt.show()
 # for i,cv in enumerate(cvs):
