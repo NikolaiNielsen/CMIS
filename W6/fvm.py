@@ -35,11 +35,14 @@ def project_to_edge(xi, yi, xj, yj, x, y):
     return px, py
 
 
-def draw_control_volumes(x, y, simplices, cvs, scale=0.05):
+def draw_control_volumes(x, y, simplices, cvs, scale=0.05, plot_list=None):
 
     fig, ax = plt.subplots()
     ax.triplot(x, y, simplices)
-    for cv in cvs:
+
+    if plot_list is not None:
+        cvs = [cvs[i] for i in plot_list]
+    for n, cv in enumerate(cvs):
         ax.plot([cv['ox'], cv['dx']], [cv['oy'], cv['dy']], 'r-',
                 linewidth=2)
         ax.plot(cv['ox'], cv['oy'], '*g', linewidth=2)
@@ -436,7 +439,7 @@ def calc_M(x, y):
     return M_in if in_ else M_out
 
 
-def matrix_assembly(x, y, simplices, cvs):
+def matrix_assembly(x, y, simplices, cvs, flip_M=False):
     N = len(cvs)
     A = np.zeros((N, N))
     b = np.zeros(N)
@@ -456,25 +459,39 @@ def matrix_assembly(x, y, simplices, cvs):
             # mx/my: midpoint of edge
             # nx/ny: outward normal
             # ex/ey: edge direction normal
-            Mx, My = calc_M(mx, my)
+            Mx, My = calc_M(mx, my) if not flip_M else -calc_M(mx, my)
+            le = np.sqrt((x[n]-x[j])**2 + (y[n]-y[j])**2)
+
+            # calculate if we encounter discontinuity and calc new l
+            # accordingly
+            o_in = ox**2 + oy**2 <= 1
+            d_in = dx**2 + dy**2 <= 1
+            if o_in and not d_in:
+                l2 = calc_circle_intersection(dx, ox, dy, oy, l)
+                l = l2
+            elif d_in and not o_in:
+                l2 = calc_circle_intersection(ox, dx, oy, dy, l)
+                l = l2
+                
+
+            me = Mx*nx + My*ny
             if code == 0:
                 # We are inside the domain. Straightforward discretization
                 # print(n)
-                me = Mx*nx + My*ny
+                
                 b[n] += me*l
-                # le = np.sqrt((ox-dx)**2 + (oy-dy)**2)
-                A[n, n] += -1
-                A[n, j] += 1
+                
+                A[n, n] += -l/le
+                A[n, j] += l/le
 
             elif code == 1:
                 # Edge is coming from inside domain, ends on physical boundary
                 # We must apply special discretization (destination node is on
                 # convex hull)
-                me = Mx*nx + My*ny
                 b[n] += me*l
                 # le = np.sqrt((ox-dx)**2 + (oy-dy)**2)
-                A[n, n] += -1
-                A[n, j] += 1
+                A[n, n] += -l/le
+                A[n, j] += l/le
             elif code == 2:
                 # Edge is on physical boundary. Must apply boundary condition
                 pass
@@ -482,7 +499,7 @@ def matrix_assembly(x, y, simplices, cvs):
                 raise Exception('Unrecognized code for vertex')
     
     # Let's do the BC with topmost vertex being 0:
-    top = y == np.amax(y)
+    top = y == np.amax(y) if not flip_M else y == np.amin(y)
     middle = np.isclose(x,-0.25,atol=1e-2, rtol=1e-1)
     id_ = np.arange(top.size)[top*middle]
     A[id_] = 0
@@ -490,6 +507,35 @@ def matrix_assembly(x, y, simplices, cvs):
     b[id_] = 0
 
     return A, b
+
+
+def calc_circle_intersection(x1, x2, y1, y2, le):
+    r = 1
+    dx = x1-x2
+    dy = y1-y2
+    dr = le
+    D = x1*y2-x2*y1
+    sign = 1 if dy>0 else -1
+    sign = sign if dy != 0 else 0
+    disc = np.sqrt(r**2 * dr**2 - D**2)
+    px1 = (D*dy + sign * dx * disc)/dr**2
+    px2 = (D*dy - sign * dx * disc)/dr**2
+    if dx == 0:
+        # print((x1, y1), (x2,y2))
+        py1 = (-D*dy + np.abs(dy) * disc)/dr**2
+        s1 = (py1-y1)/(y2-y1)
+    else:
+        s1 = (px1-x1)/(x2-x1)
+    if s1 >= 0 and s1 <= 1:
+        px = px1
+        py = (-D*dy + np.abs(dy) * disc)/dr**2
+    else:
+        px = px2
+        py = (-D*dy - np.abs(dy) * disc)/dr**2
+
+    l = np.sqrt((px-x2)**2 + (py-y2)**2)
+    return l
+    
 
 
 def plot_B(x,y,simplices,phi):
@@ -524,15 +570,91 @@ def call_matlab(print_=False):
         print(p.returncode)
 
 
-x, y, simplices, cvs = load_cvs_mat('matlab/control_volumes.mat')
-A, b = matrix_assembly(x,y,simplices, cvs)
-phi = np.linalg.solve(A, b)
-# fig, ax = draw_field(x, y, simplices, phi)
+def ex_res_x():
+    x, y, simplices, cvs = load_cvs_mat('matlab/control_volumes.mat')
+    A, b = matrix_assembly(x,y,simplices, cvs)
+    phi = np.linalg.solve(A, b)
+    xx, yy, phi2 = calc_phi_on_grid(x, y, simplices, phi)
+    res = phi2 - phi2[:,::-1]
+    total_res = np.sum(res**2)/res.size
+    # print(total_res)
 
-fig, ax = draw_strealines(x, y, simplices, phi)
-fig, ax = draw_surface(x, y, simplices, phi)
-fig, ax = draw_gradients(x, y, simplices, phi)
-fig,ax = draw_control_volumes(x,y,simplices, cvs)
-# fig, ax = plot_B(x, y, simplices, phi)
-plt.show()
+    fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+    ax.plot_surface(xx, yy, res, cmap='hsv')
+    fig.tight_layout()
+    ax.set_title(f'Residual on x-parity flip. Total: {total_res:.3e}')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('$\phi(x,y)-\phi(-x,y)$')
+    fig.tight_layout()
+    fig.savefig('handin/ex_res_x.pdf')
 
+
+def ex_control_volumes():
+    x, y, simplices, cvs = load_cvs_mat('matlab/control_volumes.mat')
+    fig, ax = draw_control_volumes(x, y, simplices, cvs, plot_list=[14, 20])
+    fig.set_size_inches((4,3.5))
+    ax.set_xlim(-2.2, -1)
+    ax.set_ylim(-1.15, 0)
+    ax.set_title('Sample control volumes')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    fig.tight_layout()
+    fig.savefig('handin/control_volumes.pdf')
+
+
+def ex_res_y():
+    x, y, simplices, cvs = load_cvs_mat('matlab/control_volumes.mat')
+    A, b = matrix_assembly(x, y, simplices, cvs)
+    phi = np.linalg.solve(A, b)
+
+    A2, b2 = matrix_assembly(x, y, simplices, cvs, flip_M=True)
+    phi2 = np.linalg.solve(A2, b2)
+
+    print(np.sum(phi.flatten())/phi.size)
+    xx, yy, phi = calc_phi_on_grid(x, y, simplices, phi)
+    xx, yy, phi2 = calc_phi_on_grid(x, y, simplices, phi2)
+    diff = np.sum(phi.flatten())/phi.size - np.sum(phi2.flatten())/phi.size
+    res = phi - phi2[::-1,:]-diff
+    total_res = np.sum(res.flatten()**2)/res.size
+    print(total_res)
+
+    fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+    ax.plot_surface(xx, yy, res, cmap='hsv')
+    fig.tight_layout()
+    ax.set_title(f'Residual on CP flip. Total: {total_res:.3e}')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('$\phi(x,y)-\phi(x,-y)$')
+    fig.tight_layout()
+    fig.savefig('handin/ex_res_y.pdf')
+    plt.show()
+
+
+def ex_simple():
+    x, y, simplices, cvs = load_cvs_mat('matlab/control_volumes.mat')
+    A, b = matrix_assembly(x, y, simplices, cvs)
+    phi = np.linalg.solve(A, b)
+
+    fig1, ax1 = draw_surface(x, y, simplices, phi)
+    fig2, ax2 = draw_strealines(x, y, simplices, phi)
+
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax1.set_zlabel('$\phi$')
+    ax1.view_init(30, 35)
+    ax1.set_title(r'Solution to $\nabla^2\phi = \nabla\cdot \mathbf{M}$')
+    
+    fig2.set_size_inches(6,3)
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('y')
+    ax2.set_title(r'Streamline plot of $\nabla \phi$')
+
+    fig1.tight_layout()
+    fig2.tight_layout()
+    fig1.savefig('handin/ex_simple.pdf')
+    fig2.savefig('handin/ex_streams.pdf')
+
+ex_simple()
+ex_res_x()
+ex_res_y()
