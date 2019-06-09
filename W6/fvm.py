@@ -39,28 +39,15 @@ def draw_control_volumes(x, y, simplices, cvs, scale=0.05):
 
     fig, ax = plt.subplots()
     ax.triplot(x, y, simplices)
-    i = 0
-    n = 9
     for cv in cvs:
-        if i == n:
-            ax.plot([cv['ox'], cv['dx']], [cv['oy'], cv['dy']], 'r-',
-                    linewidth=2)
-            # ax.plot(cv['ox'], cv['oy'], '*', linewidth=2)
-            # ax.scatter(x[i], y[i])
-            print(list(zip(cv['N'],cv['code'])))
-            # ax.scatter(x[cv['N']], y[cv['N']])
-            mask = cv['N'] == -1
-            mask2 = cv['code'] == 1
-            # ax.scatter(cv['ox'][mask], cv['oy'][mask])
-            ax.scatter(cv['ox'][mask2], cv['oy'][mask2])
-            ax.scatter(cv['dx'][mask2], cv['dy'][mask2])
-            ax.scatter(x[cv['N'][mask2]], y[cv['N'][mask2]])
-            # ax.plot(cv['mx'], cv['my'], '*b', linewidth=2)
-            # ax.plot([cv['ox'], scale*cv['ex']+cv['ox']],
-            #         [cv['oy'], scale*cv['ey']+cv['oy']], '-g', linewidth=2)
-            # ax.plot([cv['mx'], scale*cv['nx']+cv['mx']],
-            #         [cv['my'], scale*cv['ny']+cv['my']], '-g', linewidth=2)
-        i += 1
+        ax.plot([cv['ox'], cv['dx']], [cv['oy'], cv['dy']], 'r-',
+                linewidth=2)
+        ax.plot(cv['ox'], cv['oy'], '*g', linewidth=2)
+        ax.plot(cv['mx'], cv['my'], '*b', linewidth=2)
+        ax.plot([cv['ox'], scale*cv['ex']+cv['ox']],
+                [cv['oy'], scale*cv['ey']+cv['oy']], '-g', linewidth=2)
+        ax.plot([cv['mx'], scale*cv['nx']+cv['mx']],
+                [cv['my'], scale*cv['ny']+cv['my']], '-g', linewidth=2)
     ax.set_aspect('equal')
     fig.tight_layout()
     return fig, ax
@@ -73,6 +60,7 @@ def draw_gradients(x, y, simplices, phi):
     fig, ax = plt.subplots()
     ax.contour(xx, yy, phi, 20, cmap='hsv')
     ax.quiver(xx, yy, dx, dy, cmap='hsv')
+    ax.set_aspect('equal')
     fig.tight_layout()
     
     return fig, ax
@@ -83,7 +71,11 @@ def draw_surface(x, y, simplices, phi):
 
     fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
     # ax.plot_trisurf(x, y, phi, cmap='hsv')
-    ax.plot_surface(xx, yy, phi)
+    ax.plot_surface(xx, yy, phi, cmap='hsv')
+    max_ = max(np.amax(x), np.amax(y))
+    min_ = min(np.amin(x), np.amin(y))
+    # ax.set_xlim(max_, min_)
+    # ax.set_ylim(max_, min_)
     fig.tight_layout()
 
     return fig, ax
@@ -93,6 +85,7 @@ def draw_strealines(x, y, simplices, phi):
     xx, yy, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
     fig, ax = plt.subplots()
     ax.streamplot(xx, yy, dx, dy)
+    ax.set_aspect('equal')
     fig.tight_layout()
     return fig, ax
 
@@ -109,7 +102,7 @@ def draw_field(x, y, simplices, phi):
     for n, tri in enumerate(triangles):
         poly = Polygon(tri, facecolor=cmap.to_rgba(phi2[n]))
         ax.add_patch(poly)
-
+    ax.set_aspect('equal')
     return fig, ax
 
 
@@ -487,8 +480,31 @@ def matrix_assembly(x, y, simplices, cvs):
                 pass
             else:
                 raise Exception('Unrecognized code for vertex')
+    
+    # Let's do the BC with topmost vertex being 0:
+    top = y == np.amax(y)
+    middle = np.isclose(x,-0.25,atol=1e-2, rtol=1e-1)
+    id_ = np.arange(top.size)[top*middle]
+    A[id_] = 0
+    A[id_,id_] = 1
+    b[id_] = 0
+
     return A, b
 
+
+def plot_B(x,y,simplices,phi):
+    xx, yy, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
+    M = np.zeros((*xx.shape,2))
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            M[i,j,:] = calc_M(xx[i,j], yy[i,j])
+    Bx = M[:,:,0] - dx
+    By = M[:, :, 1] - dy
+    fig, ax = plt.subplots()
+    ax.streamplot(xx, yy, Bx, By)
+    ax.set_aspect('equal')
+    fig.tight_layout()
+    return fig, ax
 
 def write_to_mat(X, Y):
     name = 'matlab/points.mat'
@@ -511,10 +527,12 @@ def call_matlab(print_=False):
 x, y, simplices, cvs = load_cvs_mat('matlab/control_volumes.mat')
 A, b = matrix_assembly(x,y,simplices, cvs)
 phi = np.linalg.solve(A, b)
-fig, ax = draw_field(x, y, simplices, phi)
+# fig, ax = draw_field(x, y, simplices, phi)
 
 fig, ax = draw_strealines(x, y, simplices, phi)
 fig, ax = draw_surface(x, y, simplices, phi)
 fig, ax = draw_gradients(x, y, simplices, phi)
+fig,ax = draw_control_volumes(x,y,simplices, cvs)
+# fig, ax = plot_B(x, y, simplices, phi)
 plt.show()
 
