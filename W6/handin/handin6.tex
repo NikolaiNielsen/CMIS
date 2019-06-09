@@ -119,20 +119,9 @@ Of course as the triangles become ``less'' equilateral, this approximation will 
 
 Further, when considering edges which end on the boundary of the domain we have no easy way of calculating the directional derivative at the midpoint of the edge. We therefore use the zeroth order approximation that the value at the midpoint is the same as that at the end point - precisely the same equation as above.
 
-If the edge of the control volume is along the boundary of the domain, we need to apply the boundary condition $ \grad \phi \D \V{n} = 0$. We can use the value of $ \phi $ at the end point with a incenter perpendicular to the boundary (call it $ \phi_e $), along with the value of $ \phi $ at the incenter to estimate the directional derivative (call it $ \phi_c $).
+If the edge of the control volume is along the boundary of the domain, we need to apply the boundary condition $ \grad \phi \D \V{n} = 0$. Putting the boundary condition into the integral gives us the solution: we just should not compute the integral for domain boundary. The integral on both sides are zero (the left hand side is zero since there is only a magnetisation on a single point in both the top and bottom domain boundary, which will not influence the integral).
 
-We approximate the two values as
-\begin{equation}\label{key}
-	\phi_c = \frac{1}{3} (\phi_i + \phi_j + \phi_k) \quad \phi_e = \frac{\phi_j-\phi_i}{x_j-x_i} (x_e-x_i) + \phi_i 
-\end{equation}
-ie the value of the incenter is the mean of the vertex values, and the value at the edge is linearly interpolated between the vertices on the edge (see figure \textbf{REF}). The directional derivative is then approximated by
-\begin{equation}\label{key}
-	\grad\phi \D \V{N} \approx \frac{\phi_e - \phi_c}{|\V{x}_e - \V{x}_c|} = \frac{\phi_i \pp{\frac{4}{3} + \frac{x_e-x_i}{x_j-x_i}} + \phi_j \pp{\frac{1}{3} + \frac{x_e-x_i}{x_j-x_i}} + \frac{\phi_k}{3}}{|\V{x}_c - \V{x}_e|}
-\end{equation}
-For the source term we just put a 0.
-
-
-Putting all these considerations together we get the equation for the $ i $'th control volume (with $ i $ not being a boundary vertex):
+Putting all these considerations together we get the equation for the $ i $'th control volume:
 \begin{equation}\label{key}
 	\sum_{e \in \Gamma_v} \frac{\phi_{j(e)}-\phi_i}{|\V{x}_i - \V{x}_{j(e)}|} \ell_e = \sum_{e\in \Gamma_v} \V{M}_e \D \V{n}_e.
 \end{equation}
