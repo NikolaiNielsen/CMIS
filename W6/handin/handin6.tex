@@ -8,7 +8,7 @@
 
 
 
-\usepackage{lipsum}
+\usepackage{Nikolai}
 
 
 
@@ -30,9 +30,84 @@
 \maketitle
 
 \section{Finite Volume Method}
-The finite volume method uses the approximation of piecewise integrals to solve a partial differential equation. One takes the governing equation and integrates it over some finite, fixed volume $ V $. Now one can split the volume into several smaller volumes, called \textit{control volumes}. One can then use numerical approximations to evaluate the integral - or at least get a set of linear equations for each control volume. These equations can then be gathered into one matrix and solved for the unknown field.
+The finite volume method uses the approximation of piecewise integrals to solve a partial differential equation. One takes the governing equation and integrates it over some finite, fixed volume $ V $. Now one can split the volume into several smaller volumes, called \textit{control volumes}. One can then use numerical approximations to evaluate the integral and obtain a set of linear equations for each control volume. These equations can then be gathered into one matrix and solved for the unknown field.
 
+In this case we are solving a magnetostatics problem. We have a domain $ S $ defined for $ x \in [-3, 3] $ and $ y \in [-1, 1] $, where we have a magnetisation on the unit disc defined as
 
+\begin{equation}\label{key}
+	\V{M} = \begin{cases}
+	(0, -1)^T, &  x^2+y^2 \leq 1 \\
+	(0,0)^T, & \text{otherwise},
+	\end{cases}
+\end{equation}
+with no charges or currents. In this case Maxwells equations read
+\begin{equation}\label{key}
+	\grad \D \V{B} = 0, \quad \grad \times \V{H} = 0
+\end{equation}
+The magnetic field $ \V{B} $ is given by
+\begin{equation}\label{key}
+	\V{B} = \mu_0 ( \V{M} + \V{H})
+\end{equation}
+and the auxiliary field $ \V{H} $ can be written as the negative gradient of a scalar field, due to the condition of no rotation: $ \V{H} = -\grad \phi $. Putting all this into the equation for the divergence of the magnetic field gives
+\begin{equation}\label{key}
+	\grad \D \V{B} = \mu_0(\grad \D \V{M} - \grad^2 \phi) = 0
+\end{equation}
+giving us the governing equation for this system:
+\begin{equation}\label{key}
+	\grad^2 \phi = \grad \D \V{M}.
+\end{equation}
+Further, we impose the boundary conditions of
+\begin{equation}\label{key}
+	\phi(0,1) = 0, \quad \grad\phi\D \V{n} = 0 \quad \forall \V{x} \in \Gamma
+\end{equation}
+where $ \V{n} $ is the outward unit normal of the domain surface $ S $, and $ \Gamma = \partial S$ is the boundary of the domain.
+
+The approach of the finite volume method is then to integrate the governing equation over the domain and split this integral into control volumes and manipulate the equation a bit:
+\begin{align}
+	\int_S \grad \D (\grad \phi - \V{M}) \ud S &= \sum_{v \in S} \int_{S_v} \grad \D (\grad \phi - \V{M}) \ud S \\
+	&= \sum_{v \in S} \int_{\Gamma_v} (\grad \phi - \V{M}) \D \V{n}\ud \Gamma \\
+	&= 0.
+\end{align}
+Where $ S_v $ denotes a control volume. In the second equality we make use of the Gauss divergence theorem to convert a surface integral into a line integral. Now, the governing equation must hold all over the domain, and as such, so must the integral equation over each control volume. This means that we obtain an equation for each control volume:
+\begin{equation}\label{key}
+	\int_{\Gamma_v} (\grad \phi - \V{M}) \D \V{n}\ud \Gamma = 0.
+\end{equation}
+Next we further split the line integral over the control volumes boundary into smaller integrals - one for each edge on the boundary:
+\begin{equation}\label{key}
+	\int_{\Gamma_v} (\grad \phi - \V{M}) \D \V{n}\ud \Gamma = \sum_{e \in \Gamma_v} \int_{\Gamma_e} (\grad \phi - \V{M}) \D \V{n}\ud \Gamma = 0
+\end{equation}
+We now introduce the integral average of a quantity:
+\begin{equation}\label{key}
+	\overline{f(x)} = \frac{1}{b-a} \int_{a}^{b} f(x) \ud x 
+\end{equation} 
+and rewrite the integrals as
+\begin{equation}\label{key}
+	\sum_{e \in \Gamma_v} \int_{\Gamma_e} (\grad \phi - \V{M}) \D \V{n}\ud \Gamma = \sum_{e\in \Gamma_v} (\overline{\grad\phi} - \overline{\V{M}} )\ell_e = 0
+\end{equation}
+where $ \ell_e $ is the length of the $ e $'th edge. Assuming each edge is short, we approximate the integral using the midpoint rule:
+\begin{equation}\label{key}
+	\int_{a}^{b} f(x) \ud x \approx (b-a) f\pp{\frac{b-a}{2}}
+\end{equation}
+With this approximation, the integral average becomes just the value of the integrand at the midpoint of the edge. This makes sense, since we are essentially saying that the integrand is constant over the integration range, and so the average is precisely this constant. All we need now, is a way to calculate the midpoint value, and then we are set to solve the problem!
+
+\subsection{Control volumes}
+Now, we have used the words control volume and made reference to its edges along the boundary. In general a control volume is any fixed, finite volume in the domain. We of course need the union of all control volumes to be exactly the whole domain, otherwise the solution obtained will not be a solution to the problem posed.
+
+One could use a mesh of triangles, quadrilaterals, or any other shape, for that matter. The choice depends on where one stores the values of the unknowns as well as ease of computability. In our case we use a triangular mesh, where we store the values of $ \phi $ on the vertices, and use a vertex centred dual control volume. 
+
+This means that for each vertex in our mesh, we compute the incenters of all triangles the vertex is a part of, and join these together. If the vertex is on the boundary of the domain, we join the incenter of the two boundary triangles to the nearest point on the boundary. See figure \textbf{ref} for an example.
+
+This choice of control volumes gives us an easy way of calculating the directional derivative $ \grad\phi \D \V{n} $, under the assumption that the triangles are close to being equilateral. If the triangles are equilateral, then the line joining the incenters of two adjacent triangles will also be the perpendicular bisector between the two vertices shared by the triangles (see figure \textbf{ref}). This then means that the directional derivative from the $ i $'th vertex to the $ j $'th vertex can be approximated easily using a finite difference:
+\begin{equation}\label{key}
+	\grad \phi \D \V{n} \approx \frac{\phi_j - \phi_i}{|\V{x}_i-\V{x}_j|}
+\end{equation}
+Of course as the triangles become ``less'' equilateral, this approximation will be more erroneous. This is evident in figure \textbf{ref} where the outward surface normal of the control volume does not line up with the straight line segment between two vertices.
+
+In this case one can ``reconstruct'' the directional derivative by constructing the gradient from several points and then taking the dot product. In particular, say we want the $ y $-component of some vector $ \V{v} $, where we know the $ x $-component and the projection of $ \V{v} $ along some direction $ \V{s} $, where $ \theta $ is the angle between $ \V{s} $ and the $ y $-axis. If $ \Delta $ is the size of the projection then we get:
+\begin{equation}\label{key}
+	\V{v} \D \V{s} = \Delta = \frac{\cos \theta}{\sqrt{v_x^2 + v_y^2}} \quad \Rightarrow \quad v_y = \sqrt{\pp{\frac{\cos \theta}{\Delta}}^2 - v_x^2}
+\end{equation}
+The directional derivative of $ \phi $ in the $ \V{n} $ direction corresponds to $ v_y $, whilst $ \Delta = (\phi_j-\phi_i)/|\V{x}_i-\V{x}_j| $ is the directional derivative between the two vertices. We can approximate the directional derivative of $ \phi $ in a direction perpendicular to $ \V{n} $ by using the value of $ \phi $ at the incenters (which are also the end points of the edge of the control volume). If we call the \textbf{THIS DOES NOT GIVE A LINEAR SYSTEM}
 
 
 \end{document}
