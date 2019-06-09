@@ -5,6 +5,7 @@ import matplotlib.cm as cm
 import matplotlib.colors as colors
 from matplotlib.patches import Polygon
 from scipy import spatial
+from scipy import interpolate
 from mpl_toolkits.mplot3d import Axes3D
 import scipy.io as sio
 import sys
@@ -38,18 +39,27 @@ def draw_control_volumes(x, y, simplices, cvs, scale=0.05):
 
     fig, ax = plt.subplots()
     ax.triplot(x, y, simplices)
-    i = 1
-    n = 13
+    i = 0
+    n = 9
     for cv in cvs:
         if i == n:
             ax.plot([cv['ox'], cv['dx']], [cv['oy'], cv['dy']], 'r-',
                     linewidth=2)
-            ax.plot(cv['ox'], cv['oy'], '*g', linewidth=2)
-            ax.plot(cv['mx'], cv['my'], '*b', linewidth=2)
-            ax.plot([cv['ox'], scale*cv['ex']+cv['ox']],
-                    [cv['oy'], scale*cv['ey']+cv['oy']], '-g', linewidth=2)
-            ax.plot([cv['mx'], scale*cv['nx']+cv['mx']],
-                    [cv['my'], scale*cv['ny']+cv['my']], '-g', linewidth=2)
+            # ax.plot(cv['ox'], cv['oy'], '*', linewidth=2)
+            # ax.scatter(x[i], y[i])
+            print(list(zip(cv['N'],cv['code'])))
+            # ax.scatter(x[cv['N']], y[cv['N']])
+            mask = cv['N'] == -1
+            mask2 = cv['code'] == 1
+            # ax.scatter(cv['ox'][mask], cv['oy'][mask])
+            ax.scatter(cv['ox'][mask2], cv['oy'][mask2])
+            ax.scatter(cv['dx'][mask2], cv['dy'][mask2])
+            ax.scatter(x[cv['N'][mask2]], y[cv['N'][mask2]])
+            # ax.plot(cv['mx'], cv['my'], '*b', linewidth=2)
+            # ax.plot([cv['ox'], scale*cv['ex']+cv['ox']],
+            #         [cv['oy'], scale*cv['ey']+cv['oy']], '-g', linewidth=2)
+            # ax.plot([cv['mx'], scale*cv['nx']+cv['mx']],
+            #         [cv['my'], scale*cv['ny']+cv['my']], '-g', linewidth=2)
         i += 1
     ax.set_aspect('equal')
     fig.tight_layout()
@@ -61,7 +71,7 @@ def draw_gradients(x, y, simplices, phi):
     xx, yy, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
 
     fig, ax = plt.subplots()
-    ax.contour(xx, yy, C, 20, cmap='hsv')
+    ax.contour(xx, yy, phi, 20, cmap='hsv')
     ax.quiver(xx, yy, dx, dy, cmap='hsv')
     fig.tight_layout()
     
@@ -72,19 +82,17 @@ def draw_surface(x, y, simplices, phi):
     xx, yy, phi = calc_phi_on_grid(x, y, simplices, phi)
 
     fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
-    ax.plot_surface(xx, yy, phi, cmap='hsv')
+    # ax.plot_trisurf(x, y, phi, cmap='hsv')
+    ax.plot_surface(xx, yy, phi)
     fig.tight_layout()
 
     return fig, ax
 
 
 def draw_strealines(x, y, simplices, phi):
-    _, _, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
-    N = 20
-    sx = np.linspace(np.amin(x), np.amax(x), N)
-    sy = np.linspace(np.amin(y), np.amax(y), N)
+    xx, yy, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
     fig, ax = plt.subplots()
-    ax.streamplot(sx, sy, dx, dy)
+    ax.streamplot(xx, yy, dx, dy)
     fig.tight_layout()
     return fig, ax
 
@@ -92,16 +100,24 @@ def draw_strealines(x, y, simplices, phi):
 def draw_field(x, y, simplices, phi):
     fig, ax = plt.subplots()
     fig.tight_layout()
-    cmap_name = 'greys_r'
+    cmap_name = 'Greys_r'
     norm = colors.Normalize(np.amin(phi), np.amax(phi))
     cmap = cm.ScalarMappable(norm, cmap_name)
 
-    triangles = mesh.all_triangles(simplices, x, y)
+    triangles, phi2 = calc_phi_on_centroids(x, y, simplices, phi)
+
     for n, tri in enumerate(triangles):
-        poly = Polygon(tri, facecolor=cmap.to_rgba(phi[n]))
+        poly = Polygon(tri, facecolor=cmap.to_rgba(phi2[n]))
         ax.add_patch(poly)
 
     return fig, ax
+
+
+def calc_phi_on_centroids(x, y, simplices, phi):
+    triangles = mesh.all_triangles(simplices, x, y)
+    phi_tri = phi[simplices]
+    phi_tri_avg = np.mean(phi_tri, axis=1)
+    return triangles, phi_tri_avg
 
 
 def calc_phi_on_grid(x, y, simplices, phi, gradient=False):
@@ -114,20 +130,23 @@ def calc_phi_on_grid(x, y, simplices, phi, gradient=False):
     Y = np.linspace(y_min, y_max, N)
 
     xx, yy = np.meshgrid(X, Y)
-    points = np.array((xx.flatten(), xy.flatten()))
-    if points.shape[1] != 2:
-        points = points.T
-    si, bc = point_location(tri, points)
-    phi_i = phi[simplices[si, 0]]
-    phi_j = phi[simplices[si, 1]]
-    phi_k = phi[simplices[si, 2]]
+    # points = np.array((xx.flatten(), yy.flatten()))
+    # if points.shape[1] != 2:
+    #     points = points.T
+    phi2 = interpolate.griddata((x, y), phi, (xx, yy))
+    # tri = spatial.Delaunay(np.array((x,y)).T)
+    # si, bc = point_location(tri, points)
+    # phi_i = phi[simplices[si, 0]]
+    # phi_j = phi[simplices[si, 1]]
+    # phi_k = phi[simplices[si, 2]]
 
-    C = phi_i * bc[:, 0] + phi_j * bc[:, 1] + phi_k * bc[:, 2]
-    C = C.reshape([N, N])
+    # C = phi_i * bc[:, 0] + phi_j * bc[:, 1] + phi_k * bc[:, 2]
+    # C = C.reshape([N, N])
     if gradient:
-        dx, dy = np.gradient(C)
-        return xx, yy, C, dx, dy
-    return xx, yy, C
+        dx, dy = np.gradient(phi2)
+        return xx, yy, phi2, dx, dy
+    return xx, yy, phi2
+
 
 def point_location(tri, p):
     """
@@ -445,14 +464,14 @@ def matrix_assembly(x, y, simplices, cvs):
             # nx/ny: outward normal
             # ex/ey: edge direction normal
             Mx, My = calc_M(mx, my)
-
             if code == 0:
                 # We are inside the domain. Straightforward discretization
+                # print(n)
                 me = Mx*nx + My*ny
                 b[n] += me*l
-                le = np.sqrt((ox-dx)**2 + (oy-dy)**2)
-                A[n, e] = -l/le
-                A[n, j] = l/le
+                # le = np.sqrt((ox-dx)**2 + (oy-dy)**2)
+                A[n, n] += -1
+                A[n, j] += 1
 
             elif code == 1:
                 # Edge is coming from inside domain, ends on physical boundary
@@ -460,10 +479,9 @@ def matrix_assembly(x, y, simplices, cvs):
                 # convex hull)
                 me = Mx*nx + My*ny
                 b[n] += me*l
-                le = np.sqrt((ox-dx)**2 + (oy-dy)**2)
-                A[n, e] = -l/le
-                A[n, j] = l/le
-
+                # le = np.sqrt((ox-dx)**2 + (oy-dy)**2)
+                A[n, n] += -1
+                A[n, j] += 1
             elif code == 2:
                 # Edge is on physical boundary. Must apply boundary condition
                 pass
@@ -490,38 +508,13 @@ def call_matlab(print_=False):
         print(p.returncode)
 
 
-
-# points = np.array([[0, 0], [0, 1.1], [1, 0], [1, 1], [2,2]])
-# x, y = points.T
-# tri = spatial.Delaunay(points)
-# simplices = tri.simplices
-# simplices = np.array(([3, 0 ,2],
-#                       [3, 2, 4],
-#                       [1, 3, 4],
-#                       [1, 0, 3]))
-
-# x, y, simplices, cvs = load_cvs_mat('control_volumes2.mat')
-# write_to_mat(x, y)
-call_matlab()
 x, y, simplices, cvs = load_cvs_mat('matlab/control_volumes.mat')
-# x = np.squeeze(x)
-# y = np.squeeze(y)
-# # print(simplices.shape)
-# # triangles = mesh.all_triangles(simplices, x, y)
-# # incenters = calc_incenters(triangles)
-# # hull = spatial.ConvexHull(points)
-# # for i in range(x.size):
-# #     indices = mesh.find_neighbouring_simplices(simplices, i)
-# #     print(indices)
+A, b = matrix_assembly(x,y,simplices, cvs)
+phi = np.linalg.solve(A, b)
+fig, ax = draw_field(x, y, simplices, phi)
 
-# # fig, ax = plt.subplots()
-# # ax.triplot(x,y,simplices)
-# # plt.show()
-# # print(simplices)
-# # cvs = create_control_volumes(x, y, simplices)
-fig, ax = draw_control_volumes(x, y, simplices, cvs, 0.05)
+fig, ax = draw_strealines(x, y, simplices, phi)
+fig, ax = draw_surface(x, y, simplices, phi)
+fig, ax = draw_gradients(x, y, simplices, phi)
 plt.show()
-# for i,cv in enumerate(cvs):
-#     print(f'CV {i}')
-#     for key, value in cv.items():
-#         print(key, value)
+
