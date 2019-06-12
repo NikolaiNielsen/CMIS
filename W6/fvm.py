@@ -629,7 +629,7 @@ def ex_res_y():
     ax.set_title(f'Residual on CP flip. Total: {total_res:.3e}')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
-    ax.set_zlabel('$\phi(x,y)-\phi(x,-y)$')
+    ax.set_zlabel(r'$\phi(x,y)-\phi(x,-y)$')
     fig.tight_layout()
     fig.savefig('handin/ex_res_y.pdf')
     plt.show()
@@ -645,7 +645,7 @@ def ex_simple():
 
     ax1.set_xlabel('x')
     ax1.set_ylabel('y')
-    ax1.set_zlabel('$\phi$')
+    ax1.set_zlabel(r'$\phi$')
     ax1.view_init(30, 35)
     ax1.set_title(r'Solution to $\nabla^2\phi = \nabla\cdot \mathbf{M}$')
     
