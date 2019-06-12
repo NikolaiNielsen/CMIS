@@ -8,6 +8,7 @@ from scipy import spatial
 from scipy import interpolate
 from mpl_toolkits.mplot3d import Axes3D
 import scipy.io as sio
+import os
 import sys
 sys.path.append('../useful_functions')
 import mesh
@@ -553,12 +554,15 @@ def plot_B(x,y,simplices,phi):
 
 
 def write_to_mat(X, Y):
-    name = 'matlab/points.mat'
+    name = 'points.mat'
     sio.savemat(name, mdict={'X':X, 'Y':Y})
 
 
 def call_matlab(print_=False):
-    cmd_name = "run('matlab/process_data.m');exit;"
+    cwd = os.getcwd()
+    matlab = ['useful_functions', 'matlab']
+    matlab_path = os.path.join(os.path.dirname(cwd), *matlab)
+    cmd_name = f"cd '{matlab_path}';process_data('{cwd}');exit;"
     args = f'-nodisplay -nosplash -nodesktop -r "{cmd_name}"'
     cmd = ['matlab', args]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -655,6 +659,6 @@ def ex_simple():
     fig1.savefig('handin/ex_simple.pdf')
     fig2.savefig('handin/ex_streams.pdf')
 
-ex_simple()
-ex_res_x()
-ex_res_y()
+# ex_simple()
+# ex_res_x()
+# ex_res_y()
