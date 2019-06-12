@@ -414,7 +414,7 @@ def load_cvs_mat(name):
     cvs = []
     for c in cvs_mat:
         keys = ['I', 'N', 'ox', 'oy', 'dx', 'dy', 'l', 'ex', 'ey', 'nx',
-                'ny', 'mx', 'my', 'code']
+                'ny', 'mx', 'my', 'code', 'sx', 'sy', 'sl']
         values = c[0][0][0]
         values = [i.squeeze() for i in values]
         d = dict(zip(keys, values))
@@ -537,7 +537,6 @@ def calc_circle_intersection(x1, x2, y1, y2, le):
     return l
     
 
-
 def plot_B(x,y,simplices,phi):
     xx, yy, phi, dx, dy = calc_phi_on_grid(x, y, simplices, phi, gradient=True)
     M = np.zeros((*xx.shape,2))
@@ -551,6 +550,7 @@ def plot_B(x,y,simplices,phi):
     ax.set_aspect('equal')
     fig.tight_layout()
     return fig, ax
+
 
 def write_to_mat(X, Y):
     name = 'matlab/points.mat'

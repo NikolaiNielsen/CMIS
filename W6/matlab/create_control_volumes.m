@@ -29,12 +29,18 @@ for i=1:N
   NY = [];
   MX = [];
   MY = [];
+  SX = [];
+  SY = [];
+  SL = [];
   code = [];
   
   K = length(indices);
+  sxo = X(i);         % Triangle vertex start
+  syo = Y(i);
+  
   
   if Bmask(i) == 1
-    
+    % We're dealing with boundary nodes.
     a = T(indices(1),1);
     b = T(indices(1),2);
     c = T(indices(1),3);
@@ -44,10 +50,6 @@ for i=1:N
     ox = X(i);
     oy = Y(i);
     [dx, dy] = project_to_edge(X(i), Y(i), X(jj), Y(jj), CX(indices(1)), CY(indices(1)));
-    if i == 1
-       fprintf('ox: %4.2f, oy: %4.2f\n', ox, oy)
-       fprintf('dx: %4.2f, dy: %4.2f\n', dx, dy)
-    end
     l = sqrt( (dx-ox).^2 + (dy-oy).^2 );  % Edge length
     ex = (dx - ox)./l;  % Unit edge direction vector
     ey = (dy - oy)./l;
@@ -55,6 +57,7 @@ for i=1:N
     ny =  ex;
     mx = (dx+ox)./2.0;   % Edge min point
     my = (dy+oy)./2.0;
+
     
     I  = [I;  i];
     N  = [N; -1];
@@ -70,7 +73,9 @@ for i=1:N
     MX = [MX; mx];
     MY = [MY; my];
     code = [code; 2];
-    
+    SX = [SX; 0];
+    SY = [SY; 0];
+    SL = [SL; 0];
     %-----------------------------------------------------------
     ox =  dx;
     oy =  dy;
@@ -85,6 +90,14 @@ for i=1:N
     mx = (dx+ox)./2.0;   % Edge min point
     my = (dy+oy)./2.0;
 
+    sxd = X(jj);        % Triangle vertex end
+    syd = Y(jj);
+    sl = sqrt((sxo - sxd).^2 + (syo-syd).^2)./2; % Half length of triangle edge
+    sx = (sxd+sxo)/2;   % midpoint of triangle edge
+    sy = (syd+syo)/2;
+    SX = [SX; sx];
+    SY = [SY; sy];
+    SL = [SL; sl];
     I  = [I;  i];
     N  = [N;  jj];
     OX = [OX; ox];
@@ -98,6 +111,7 @@ for i=1:N
     NY = [NY; -ny];
     MX = [MX; mx];
     MY = [MY; my];
+    
     code = [code; 1];
     
   end
@@ -128,6 +142,15 @@ for i=1:N
     ny =  ex;
     mx = (dx+ox)./2.0;   % Edge min point
     my = (dy+oy)./2.0;
+
+    sxd = X(kk);        % Triangle vertex end
+    syd = Y(kk);
+    sl = sqrt((sxo - sxd).^2 + (syo-syd).^2)./2; % Half length of triangle edge
+    sx = (sxd+sxo)/2;   % midpoint of triangle edge
+    sy = (syd+syo)/2;
+    SX = [SX; sx];
+    SY = [SY; sy];
+    SL = [SL; sl];
         
     I  = [I;  i];    
     N  = [N;  kk];
@@ -168,6 +191,15 @@ for i=1:N
     mx = (dx+ox)./2.0;   % Edge min point
     my = (dy+oy)./2.0;
     
+    sxd = X(kk);        % Triangle vertex end
+    syd = Y(kk);
+    sl = sqrt((sxo - sxd).^2 + (syo-syd).^2)./2; % Half length of triangle edge
+    sx = (sxd+sxo)/2;   % midpoint of triangle edge
+    sy = (syd+syo)/2;
+    SX = [SX; sx];
+    SY = [SY; sy];
+    SL = [SL; sl];
+
     I  = [I; i];
     N  = [N; kk];
     OX = [OX; ox];
@@ -211,6 +243,9 @@ for i=1:N
     MX = [MX; mx];
     MY = [MY; my];
     code = [code; 2];
+    SX = [SX; 0];
+    SY = [SY; 0];
+    SL = [SL; 0];
     
   end
   
@@ -228,7 +263,10 @@ for i=1:N
     'ny',NY,...
     'mx',MX,...
     'my',MY,...
-    'code', code...
+    'code', code,...
+    'sx',SX,...
+    'sy',SY,...
+    'sl',sl...
     );
   
   CVs{i} = CV ;
