@@ -420,3 +420,22 @@ def generate_and_import_mesh(contour_list, hole_list=[], save_files=False,
             os.remove(file)
 
     return x, y, simplices
+
+
+def calc_areas(triangles):
+    """
+    Calculates the area of an array of triangles.
+    Assumes an (n, 3, 2)-array of positions, n triangles, each with 3 vertices,
+    each with 2 dimensions
+    """
+    # The area is given by half the length of the cross product between two of
+    # the triangle vectors.
+
+    # First we get the vectors by subracting a permuted array of triangles
+    vectors = triangles - triangles[:, [1, 2, 0]]
+
+    # Cross product of 2D vectors is just the z-component, which is also the
+    # length of the cross product
+    crosses = np.cross(vectors[:, 1], vectors[:, 2])
+    area = crosses/2
+    return area
