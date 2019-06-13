@@ -48,6 +48,17 @@ def calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1):
     return Pe
     
 
+def find_vertex_order(i, a, b, c):
+    if i == a:
+        return a, b, c
+    elif i == b:
+        return b, c, a
+    elif i == c:
+        return c, a, b
+    else:
+        raise Exception('i must be equal to a, b or c')
+
+
 def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
     N = x.size
     fe = np.zeros((N,2))
@@ -59,17 +70,22 @@ def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
         # With the neighbours we need to calculate N and l for these
         for neigh in neighbours:
             simp = simplices[neigh]
-            xi = x[i]
-            yi = y[i]
-            non_i = simp[simp != i]
-            xjk = x[non_i]
-            yjk = y[non_i]
-            l = np.sqrt((xjk - xi)**2 + (yjk - yi)**2)/2
-            Ne = np.zeros((2,2))
-            Ne[:,0] = xjk-xi
-            Ne[:,1] = yjk-yi
+            _, j, k = find_vertex_order(i, *simp)
+            xi, xj, xk = x[[i, j, k]]
+            yi, yj, yk = y[[i, j, k]]
+
+            Nej = -np.array((yi-yj, xj-xi))
+            Nek = np.array((yi-yk, xk-xi))
             P = Pe[neigh]
-            fi = -0.5*P@(Ne[0]*l[0] + Ne[1]*l[1])
+            fi = -0.5*P@Nej - 0.5*P@Nek
+            # if i == 1:
+            #     print(f'i, j, k: {i}, {j}, {k},')
+            #     print(f'xi: {xi}, {yi}')
+            #     print(f'xj: {xj}, {yj}')
+            #     print(f'xk: {xk}, {yk}')
+            #     print(f'Nj: {Nej}')
+            #     print(f'Nk: {Nek}')
+            #     print(f'fi: {fi}')
             fe[i] += fi
     return fe
 
