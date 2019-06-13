@@ -177,11 +177,15 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
                                              t_mask, t)
     m = m.reshape((m.size, 1))
     points_t[0] = points
+    bar = Bar('simulating', max=N)
+    bar.next()
     for n in range(1, N):
         x, y = points_t[n-1].T
         fe = calc_all_fe(x, y, simplices, cvs, De0inv, lambda_, mu)
         points_t[n], v = calc_next_time_step(points_t[n-1], v, m, f_ext, ft,
                                              fe, dt, boundary_mask)
+        bar.next()
+    bar.finish()
     return points_t
 
 
@@ -211,18 +215,19 @@ def ex_simple(dt=1, N=10):
     make_animation(points, simplices, dt)
 
 
-def make_animation(points, simplices, dt):
+def make_animation(points, simplices, dt, padding=0.5):
     fps = 1/dt
     fig, ax = plt.subplots()
     x_all = points[:,:,0].flatten()
     y_all = points[:,:,1].flatten()
-    xlims = [np.amin(x_all), np.amax(x_all)]
-    ylims = [np.amin(y_all), np.amax(y_all)]
+    xlims = [np.amin(x_all) - padding, np.amax(x_all) + padding]
+    ylims = [np.amin(y_all) - padding, np.amax(y_all) + padding]
     ax.set_xlim(*xlims)
     ax.set_ylim(*ylims)
     ax.set_aspect('equal')
     # l = ax.triplot(points[0,:,0],points[0,:,1], simplices)
     writer = anim.FFMpegWriter(fps=fps)
+    bar = Bar('Writing movie', max=points.shape[0])
     with writer.saving(fig, 'test.mp4',100):
         for n in range(points.shape[0]):
             point = points[n]
@@ -233,5 +238,7 @@ def make_animation(points, simplices, dt):
             ax.triplot(x, y, simplices)
             writer.grab_frame()
             ax.clear()
+            bar.next()
+    bar.finish()
 
 ex_simple(dt=0.1, N=100)
