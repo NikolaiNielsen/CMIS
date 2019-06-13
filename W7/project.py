@@ -1,15 +1,12 @@
 import numpy as np
 import subprocess
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import matplotlib.colors as colors
+from matplotlib import pyplot as plt, cm, colors, animation as anim
 from matplotlib.patches import Polygon
-from scipy import spatial
-from scipy import interpolate
+from scipy import spatial, interpolate, io as sio
 from mpl_toolkits.mplot3d import Axes3D
-import scipy.io as sio
 import os
 import sys
+from progress.bar import Bar
 sys.path.append('../useful_functions')
 import mesh
 import fvm
@@ -207,9 +204,34 @@ def ex_simple(dt=1, N=10):
     fig, axes = plt.subplots()
     # axes = axes.flatten()
     # for n in range(N):
-    x, y = points[-1].T
-    axes.triplot(x, y, simplices)
-    fig.tight_layout()
-    plt.show()
+    # x, y = points[-1].T
+    # axes.triplot(x, y, simplices)
+    # fig.tight_layout()
+    # plt.show()
+    make_animation(points, simplices, dt)
+
+
+def make_animation(points, simplices, dt):
+    fps = 1/dt
+    fig, ax = plt.subplots()
+    x_all = points[:,:,0].flatten()
+    y_all = points[:,:,1].flatten()
+    xlims = [np.amin(x_all), np.amax(x_all)]
+    ylims = [np.amin(y_all), np.amax(y_all)]
+    ax.set_xlim(*xlims)
+    ax.set_ylim(*ylims)
+    ax.set_aspect('equal')
+    # l = ax.triplot(points[0,:,0],points[0,:,1], simplices)
+    writer = anim.FFMpegWriter(fps=fps)
+    with writer.saving(fig, 'test.mp4',100):
+        for n in range(points.shape[0]):
+            point = points[n]
+            x, y = point.T
+            ax.set_xlim(*xlims)
+            ax.set_ylim(*ylims)
+            ax.set_aspect('equal')
+            ax.triplot(x, y, simplices)
+            writer.grab_frame()
+            ax.clear()
 
 ex_simple(dt=0.1, N=100)
