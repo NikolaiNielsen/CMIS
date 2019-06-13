@@ -158,10 +158,10 @@ def calc_edge_lengths(x):
     return A_n
 
 
-def calc_next_time_step(x, v, m, f_ext, ft, fe, dt, boundary_mask):
+def calc_next_time_step(x, v, m, f_ext, ft, fe, dt, mask):
     f_total = f_ext + ft + fe
-    v = v + dt*(f_total/m)
-    x = x + dt*v
+    v[mask] = v[mask] + dt*(f_total[mask]/m[mask])
+    x[mask] = x[mask] + dt*v[mask]
     return x, v
 
 
@@ -169,7 +169,7 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
              t=np.array((0, -1)), rho=1, t_mask=None, boundary_mask=None):
     
     if boundary_mask is None:
-        boundary_mask = x == np.amin(x)
+        boundary_mask = x != np.amin(x)
     if t_mask is None:
         t_mask = x == np.amax(x)
 
@@ -202,7 +202,7 @@ def ex_simple(dt=1, N=10):
     rho = lambda_ = mu = 1
     b = np.zeros(2)
     t = 1e-2 * np.array((0,-1))
-    x, y, simplices, cvs = fvm.load_cvs_mat('control_volumes.mat')
+    x, y, simplices, cvs = fvm.load_cvs_mat('control_volumes2.mat')
     points = simulate(x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho)
     fig, axes = plt.subplots()
     # axes = axes.flatten()
@@ -212,22 +212,4 @@ def ex_simple(dt=1, N=10):
     fig.tight_layout()
     plt.show()
 
-# x, y, simplices, cvs = fvm.load_cvs_mat('control_volumes.mat')
-# dt = 1
-# t = 1e-2*np.array((0,-1))
-# boundary_mask = x==x
-# points = np.array((x, y)).T
-# v = np.zeros(points.shape)
-# De0inv, m, f_ext, ft = calc_intial_stuff(x, y, simplices, t=t)
-# m = m.reshape((m.size,1))
-# fe = calc_all_fe(x, y, simplices, cvs, De0inv, lambda_=1, mu=1)
-# f_total = f_ext + ft + fe
-# points2, v = calc_next_time_step(points, v, m, f_ext, ft, fe, dt,
-#                                  boundary_mask)
-# x2, y2 = points2.T
-
-# fe2 = calc_all_fe(x2, y2, simplices, cvs, De0inv, lambda_=1, mu=1)
-# fig, ax = plt.subplots()
-# ax.triplot(x2, y2, simplices)
-# plt.show()
-# print(np.sum((points2-points).flatten()))
+ex_simple(dt=0.1, N=100)
