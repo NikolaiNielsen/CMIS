@@ -129,8 +129,8 @@ def load_cvs_mat(name):
     control volume struct
     """
     mat = sio.loadmat(name)
-    x = mat['X'].squeeze()
-    y = mat['Y'].squeeze()
+    x = mat['X'].squeeze().astype(float)
+    y = mat['Y'].squeeze().astype(float)
     # Subtract to account for 1-based indexing in Matlab
     T = mat['T']-1
     cvs_mat = mat['CVs']
