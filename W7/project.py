@@ -373,3 +373,24 @@ def calc_momentum(m, v):
 
     p = np.atleast_2d(m)*v
     return np.sum(p, axis=0)
+
+
+def floor(y, y0, v):
+    """ 
+    Implement a "floor" for the simulation. If any node is below the floor, we
+    put it to the floor and kill the vertical component of the velocity.
+
+    inputs:
+    - y: (n,) array of vertical positions
+    - y0: float, floor height
+    - v: (n,2) array of current velocities
+    
+    Outputs:
+    - y: new vertical positions
+    - v: new velocities
+    """
+    below_floor = y >= y0
+    y[below_floor] = y0
+    # only kill vertical component
+    v[below_floor, 1] = 0
+    return y, v
