@@ -10,6 +10,9 @@ TexTemplate/*
 # No geogebra files
 *.ggb
 
+# No videos
+*.mp4
+
 # No zip files
 *.zip
 
