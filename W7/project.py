@@ -13,6 +13,13 @@ import fvm
 
 
 def calc_De(x, y, simplices):
+    """
+    Calculates the element side lengths
+
+    inputs:
+    - x, y: (n,) arrays of nodal positions
+    - simplices: (m,3) connectivity matrix
+    """
     triangles = mesh.all_triangles(simplices, x, y)
     N, _, _ = triangles.shape
     De = np.zeros((N, 2, 2))
@@ -28,7 +35,7 @@ def calc_De(x, y, simplices):
 def calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1):
     """
     Calculate the 1st Piola-Kirchhoff tensor based on the Lamé-parameters,
-    material coordinate De0Inv and current spatial coordinates
+    material coordinate De0Inv and current spatial coordinates.
     """
     De = calc_De(x, y, simplices)
     Fe = De @ De0Inv
@@ -36,16 +43,21 @@ def calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1):
     Ee = np.zeros(Fe.shape)
     I = np.zeros(Ee.shape)
     for n, _ in enumerate(Ee):
+        # Green strain tensor for each element
         Ee[n] = (Fe[n].T @ Fe[n] - np.eye(2))/2
         I[n] = np.eye(2)
     tr = np.trace(Ee, axis1=1, axis2=2)
     tr2 = np.atleast_3d(tr).reshape((simplices.shape[0],1,1))
+    # second and first Piola-Kirchhoff stress tensors
     Se = lambda_ * tr2*I + 2*mu*Ee
     Pe = Fe@Se
     return Pe
     
 
 def find_vertex_order(i, a, b, c):
+    """
+    cyclically permutes the list [a,b,c], such that i is in the first position.
+    """
     if i == a:
         return a, b, c
     elif i == b:
@@ -57,6 +69,16 @@ def find_vertex_order(i, a, b, c):
 
 
 def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
+    """
+    Calculate elastic forces on each vertex
+
+    inputs:
+    - x, y: (n,) array of vertex positions
+    - simplices: (m,3) connectivity matrix
+    - cvs: n-list of control volumes
+    - De0Inv: (m,2,2) inverse matrix of element sides
+    - lambda_, mu: floats, Lame parameters
+    """
     N = x.size
     fe = np.zeros((N,2))
     Pe = calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1)
@@ -74,7 +96,12 @@ def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
             Nej = -np.array((yi-yj, xj-xi))
             Nek = np.array((yi-yk, xk-xi))
             P = Pe[neigh]
+
+            # We don't need to scale Nej and Nek, since their length is already
+            # the between the i'th and j/k'th node.
             fi = -0.5*P@Nej - 0.5*P@Nek
+
+            # Debugging:
             # if i == 1:
             #     print(f'i, j, k: {i}, {j}, {k},')
             #     print(f'xi: {xi}, {yi}')
@@ -83,11 +110,22 @@ def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
             #     print(f'Nj: {Nej}')
             #     print(f'Nk: {Nek}')
             #     print(f'fi: {fi}')
+            
+            # Elastic forces on i'th vertex is sum of contribution from each
+            # element the i'th vertex is a part of.
             fe[i] += fi
     return fe
 
 
 def calc_cv_areas(x,y,simplices):
+    """
+    Calculates the nodal "area" - the area of each control volume, for a median
+    dual vertex centred control volume.
+    """
+
+    # For this type of control volume, each triangular element is split up into
+    # three parts of equal size. The size of the control volume is then the
+    # total area of all triangles the vertex is a part of, divided by 3.
     m = np.zeros(x.shape)
     triangles = mesh.all_triangles(simplices, x, y)
     areas = mesh.calc_areas(triangles)
@@ -155,8 +193,24 @@ def calc_edge_lengths(x):
     return A_n
 
 
-def calc_next_time_step(x, v, m, f_ext, ft, fe, dt, mask):
-    f_total = f_ext + ft + fe
+def calc_next_time_step(x, v, m, f_total, dt, mask):
+    """
+    Calculates the positions and velocities for the next time step with a semi
+    implicit first order Euler integration. Only update masked values (points
+    not with a boundary condition)
+
+    inputs:
+    - x: (n,2) array of current positions
+    - v: (n,2) array of current velocities
+    - m: (n,) array of nodal masses
+    - f_total: (n, 2) array of total forces acting on nodes
+    - dt: float, time step
+    - mask: (n,) boolean array. Only masked values are updated
+
+    outputs:
+    - x: (n,2) array of new positions, based on new velocities.
+    - v: (n,2) array of new velocities.
+    """
     v[mask] = v[mask] + dt*(f_total[mask]/m[mask])
     x[mask] = x[mask] + dt*v[mask]
     return x, v
@@ -164,7 +218,28 @@ def calc_next_time_step(x, v, m, f_ext, ft, fe, dt, mask):
 
 def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
              t=np.array((0, -1)), rho=1, t_mask=None, boundary_mask=None):
+    """
+    Simulates the system
+
+    Inputs:
+    - x, y: (n,) arrays of nodal positions
+    - simlices: (m,3) connectivity matrix
+    - cvs: n-list of control volumes
+    - dt: float, time step
+    - N: total steps in the simulation. The initial position is the first step,
+         so only N-1 steps are simulated
+    - lambda_, mu: Lame parameters
+    - b: body force density
+    - t: traction
+    - rho: mass density of the system
+    - t_mask: (n,) boolean array of vertices to apply traction to. if None,
+              apply traction to right boundary
+    - boundary_mask: (n,) boolean array of nodes to update, ie NOT the clamped
+                     boundary. If None, clamp left edge, ie. False on left edge
     
+    Outputs:
+    - points_t: (N,n,2) array of vertex positions for each step.
+    """
     if boundary_mask is None:
         boundary_mask = x != np.amin(x)
     if t_mask is None:
@@ -182,8 +257,9 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
     for n in range(1, N):
         x, y = points_t[n-1].T
         fe = calc_all_fe(x, y, simplices, cvs, De0inv, lambda_, mu)
-        points_t[n], v = calc_next_time_step(points_t[n-1], v, m, f_ext, ft,
-                                             fe, dt, boundary_mask)
+        f_total = ft + fe + f_ext
+        points_t[n], v = calc_next_time_step(points_t[n-1], v, m, f_total, dt,
+                                             boundary_mask)
         bar.next()
     bar.finish()
     return points_t
@@ -193,47 +269,55 @@ def calc_lame_parameters(E, nu):
     """
     Calculate the Lame parameters lambda and mu from Youngs modulus E and the
     poisson ratio nu.
+
+    Inputs:
+    - E: Young modulus of the material
+    - nu: poisson ratio of the material
+
+    outputs:
+    - lambda_: float, first Lame parameter
+    - mu: float, second Lame paramter
     """
     mu = E/(2*(1+nu))
     lambda_ = E*nu/((1+nu)*(1-2*nu))
     return lambda_, mu
 
 
-def ex_simple(dt=1, N=10):
-    rho = lambda_ = mu = 1
-    b = np.zeros(2)
-    t = 1e-2 * np.array((0,-1))
-    x, y, simplices, cvs = fvm.load_cvs_mat('control_volumes2.mat')
-    points = simulate(x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho)
-    fig, axes = plt.subplots()
-    # axes = axes.flatten()
-    # for n in range(N):
-    # x, y = points[-1].T
-    # axes.triplot(x, y, simplices)
-    # fig.tight_layout()
-    # plt.show()
-    make_animation(points, simplices, dt)
+def make_animation(points, simplices, frame_skip=100, padding=0.5, fps=12,
+                   outfile='video.mp4'):
+    """
+    Function to make an animation of the mesh.
 
-
-def make_animation(points, simplices, dt, padding=0.5):
-    fps = 1/dt
+    inputs:
+    - points: (N,n,2) array of point positions. N is number of time steps, n is
+              number of points in mesh
+    - simplices: (m, 3) connectivity matrix. m is number of triangles in mesh
+    - frame_skip: number of frames to skip. So only show the M'th iteration of
+                  the simulation
+    - padding: padding to add to the sides of the axes object. Not currently
+               implemented
+    - fps: int, number of frames per second for the video
+    - outfile: filename to write the video to. Should include file extension
+               ".mp4"
+    """
+    dpi = 200
     fig, ax = plt.subplots()
-    x_all = points[:,:,0].flatten()
-    y_all = points[:,:,1].flatten()
-    xlims = [np.amin(x_all) - padding, np.amax(x_all) + padding]
-    ylims = [np.amin(y_all) - padding, np.amax(y_all) + padding]
-    ax.set_xlim(*xlims)
-    ax.set_ylim(*ylims)
-    ax.set_aspect('equal')
+    # x_all = points[:,:,0].flatten()
+    # y_all = points[:,:,1].flatten()
+    # xlims = [np.amin(x_all) - padding, np.amax(x_all) + padding]
+    # ylims = [np.amin(y_all) - padding, np.amax(y_all) + padding]
+    # ax.set_xlim(*xlims)
+    # ax.set_ylim(*ylims)
+    # ax.set_aspect('equal')
     # l = ax.triplot(points[0,:,0],points[0,:,1], simplices)
     writer = anim.FFMpegWriter(fps=fps)
-    bar = Bar('Writing movie', max=points.shape[0])
-    with writer.saving(fig, 'test.mp4',100):
-        for n in range(points.shape[0]):
+    bar = Bar('Writing movie', max=points.shape[0]//frame_skip)
+    with writer.saving(fig, outfile, dpi):
+        for n in range(0, points.shape[0], frame_skip):
             point = points[n]
             x, y = point.T
-            ax.set_xlim(*xlims)
-            ax.set_ylim(*ylims)
+            # ax.set_xlim(*xlims)
+            # ax.set_ylim(*ylims)
             ax.set_aspect('equal')
             ax.triplot(x, y, simplices)
             writer.grab_frame()
@@ -241,4 +325,35 @@ def make_animation(points, simplices, dt, padding=0.5):
             bar.next()
     bar.finish()
 
-ex_simple(dt=0.1, N=100)
+
+def calc_pot_energy(m,y,y0=0):
+    """
+    Calculates the potential energy of the system with nodal heights y and
+    nodal masses m, given point y0 as reference
+
+    inputs:
+    - v: (n,) array of nodal heights
+    - m: (n,) array of nodal masses
+    - y0: float. reference point for energy
+
+    returns:
+    - Epot: float, total potential energy of the system
+    """
+    g = 9.8
+    return np.sum(m*(y-y0)*g)
+
+
+def calc_kin_energy(m, v):
+    """
+    Calculates the kinetic energy of the system with nodal velocities v and
+    nodal masses m.
+
+    inputs:
+    - v: (n,2) array of velocities
+    - m: (n,) array of nodal masses
+
+    returns:
+    - Ekin: float, total kinetic energy of the system
+    """
+    lv = np.sum(v*v, axis=1)
+    return np.sum(m*lv*0.5)
