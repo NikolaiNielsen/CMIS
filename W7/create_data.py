@@ -21,16 +21,25 @@ def plot_simple_cvs():
     plt.show()
 
 
-def simple(a=2):
-    x, y, T, cvs = fvm.load_cvs_mat('control_volumes.mat')
-    # print(cvs[0])
-    x = x.astype(float)
-    y = y.astype(float)
-    x2 = a*x
-    De0, m, f_ext, ft = project.calc_intial_stuff(x, y, T)
-    fe = project.calc_all_fe(x2, y, T, cvs, De0)
-    print(fe)
-
-
-simple()
-# plot_simple_cvs()
+def create_ball(r=1, y0=0, N=20, max_area=0.1, min_angle=30, plot=False):
+    """
+    Creates a ball mesh with radius r and offset y, using a regular N-sided
+    polygon.
+    
+    """
+    name = 'ball'
+    theta = np.linspace(0, 2*np.pi, N, endpoint=False)
+    x = r*np.cos(theta)
+    y = y0 + r*np.sin(theta)
+    points = np.array((x,y)).T
+    x, y, T = mesh.generate_and_import_mesh([points],
+                                            min_angle=min_angle,
+                                            max_area=max_area)
+    fvm.write_to_mat(x, y)
+    fvm.call_matlab(name)
+    if plot:
+        x, y, T, cvs = fvm.load_cvs_mat(f'{name}.mat')
+        fig, ax = plt.subplots()
+        ax.triplot(x,y, T)
+        fig.tight_layout()
+        plt.show()

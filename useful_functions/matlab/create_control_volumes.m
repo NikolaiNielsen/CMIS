@@ -1,6 +1,7 @@
-function [TR, CVs, Bmask] = create_control_volumes( T, X, Y )
+function [TR, CVs, Bmask] = create_control_volumes( TR, X, Y )
 % Copyright 2012, Kenny Erleben, DIKU
-TR = delaunayTriangulation(X, Y); % Gets all triangle vertex coordinates
+% TR = delaunayTriangulation(X, Y); % Gets all triangle vertex coordinates
+T = TR.ConnectivityList;
 IC = incenter(TR); % incenters. Use barycentric coords and side lengths
 CX = IC(:,1);
 CY = IC(:,2);
@@ -12,7 +13,6 @@ Bmask(unique( FB(:) )) = 1;
 N = length(X);
 CVs = cell(N,1);
 for i=1:N
-  
   temp = vertexAttachments(TR,i); % Get indices of triangles attached to vertex
   indices = temp{:};
   

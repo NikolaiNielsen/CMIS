@@ -92,14 +92,19 @@ def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
             _, j, k = find_vertex_order(i, *simp)
             xi, xj, xk = x[[i, j, k]]
             yi, yj, yk = y[[i, j, k]]
-
+            lij = np.sqrt((xi-xj)**2 + (yi-yj)**2)
+            lik = np.sqrt((xi-xk)**2 + (yi-yk)**2)
             Nej = -np.array((yi-yj, xj-xi))
+            # lej = np.sqrt(np.sum(Nej**2))
+            # Nej = Nej/lej
             Nek = np.array((yi-yk, xk-xi))
+            # lek = np.sqrt(np.sum(Nek**2))
+            # Nek = Nek/lek
             P = Pe[neigh]
 
             # We don't need to scale Nej and Nek, since their length is already
             # the between the i'th and j/k'th node.
-            fi = -0.5*P@Nej - 0.5*P@Nek
+            fi = 0.5*P@Nej +  0.5*P@Nek
 
             # Debugging:
             # if i == 1:
@@ -216,117 +221,7 @@ def calc_next_time_step(x, v, m, f_total, dt, mask):
     return x, v
 
 
-def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
-             t=np.array((0, -1)), rho=1, t_mask=None, boundary_mask=None):
-    """
-    Simulates the system
-
-    Inputs:
-    - x, y: (n,) arrays of nodal positions
-    - simlices: (m,3) connectivity matrix
-    - cvs: n-list of control volumes
-    - dt: float, time step
-    - N: total steps in the simulation. The initial position is the first step,
-         so only N-1 steps are simulated
-    - lambda_, mu: Lame parameters
-    - b: body force density
-    - t: traction
-    - rho: mass density of the system
-    - t_mask: (n,) boolean array of vertices to apply traction to. if None,
-              apply traction to right boundary
-    - boundary_mask: (n,) boolean array of nodes to update, ie NOT the clamped
-                     boundary. If None, clamp left edge, ie. False on left edge
-    
-    Outputs:
-    - points_t: (N,n,2) array of vertex positions for each step.
-    """
-    if boundary_mask is None:
-        boundary_mask = x != np.amin(x)
-    if t_mask is None:
-        t_mask = x == np.amax(x)
-
-    points = np.array((x,y)).T
-    v = np.zeros(points.shape)
-    points_t = np.zeros((N, *points.shape))
-    De0inv, m, f_ext, ft = calc_intial_stuff(x, y, simplices, b, rho,
-                                             t_mask, t)
-    m = m.reshape((m.size, 1))
-    points_t[0] = points
-    bar = Bar('simulating', max=N)
-    bar.next()
-    for n in range(1, N):
-        x, y = points_t[n-1].T
-        fe = calc_all_fe(x, y, simplices, cvs, De0inv, lambda_, mu)
-        f_total = ft + fe + f_ext
-        points_t[n], v = calc_next_time_step(points_t[n-1], v, m, f_total, dt,
-                                             boundary_mask)
-        bar.next()
-    bar.finish()
-    return points_t
-
-
-def calc_lame_parameters(E, nu):
-    """
-    Calculate the Lame parameters lambda and mu from Youngs modulus E and the
-    poisson ratio nu.
-
-    Inputs:
-    - E: Young modulus of the material
-    - nu: poisson ratio of the material
-
-    outputs:
-    - lambda_: float, first Lame parameter
-    - mu: float, second Lame paramter
-    """
-    mu = E/(2*(1+nu))
-    lambda_ = E*nu/((1+nu)*(1-2*nu))
-    return lambda_, mu
-
-
-def make_animation(points, simplices, frame_skip=100, padding=0.5, fps=12,
-                   outfile='video.mp4'):
-    """
-    Function to make an animation of the mesh.
-
-    inputs:
-    - points: (N,n,2) array of point positions. N is number of time steps, n is
-              number of points in mesh
-    - simplices: (m, 3) connectivity matrix. m is number of triangles in mesh
-    - frame_skip: number of frames to skip. So only show the M'th iteration of
-                  the simulation
-    - padding: padding to add to the sides of the axes object. Not currently
-               implemented
-    - fps: int, number of frames per second for the video
-    - outfile: filename to write the video to. Should include file extension
-               ".mp4"
-    """
-    dpi = 200
-    fig, ax = plt.subplots()
-    # x_all = points[:,:,0].flatten()
-    # y_all = points[:,:,1].flatten()
-    # xlims = [np.amin(x_all) - padding, np.amax(x_all) + padding]
-    # ylims = [np.amin(y_all) - padding, np.amax(y_all) + padding]
-    # ax.set_xlim(*xlims)
-    # ax.set_ylim(*ylims)
-    # ax.set_aspect('equal')
-    # l = ax.triplot(points[0,:,0],points[0,:,1], simplices)
-    writer = anim.FFMpegWriter(fps=fps)
-    bar = Bar('Writing movie', max=points.shape[0]//frame_skip)
-    with writer.saving(fig, outfile, dpi):
-        for n in range(0, points.shape[0], frame_skip):
-            point = points[n]
-            x, y = point.T
-            # ax.set_xlim(*xlims)
-            # ax.set_ylim(*ylims)
-            ax.set_aspect('equal')
-            ax.triplot(x, y, simplices)
-            writer.grab_frame()
-            ax.clear()
-            bar.next()
-    bar.finish()
-
-
-def calc_pot_energy(m,y,y0=0):
+def calc_pot_energy(m, y, y0=0):
     """
     Calculates the potential energy of the system with nodal heights y and
     nodal masses m, given point y0 as reference
@@ -375,7 +270,121 @@ def calc_momentum(m, v):
     return np.sum(p, axis=0)
 
 
-def floor(y, y0, v):
+def calc_lame_parameters(E, nu):
+    """
+    Calculate the Lame parameters lambda and mu from Youngs modulus E and the
+    poisson ratio nu.
+
+    Inputs:
+    - E: Young modulus of the material
+    - nu: poisson ratio of the material
+
+    outputs:
+    - lambda_: float, first Lame parameter
+    - mu: float, second Lame paramter
+    """
+    mu = E/(2*(1+nu))
+    lambda_ = E*nu/((1+nu)*(1-2*nu))
+    return lambda_, mu
+
+
+def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
+             t=np.array((0, -1)), rho=1, t_mask=None, boundary_mask=None,
+             y0=None):
+    """
+    Simulates the system
+
+    Inputs:
+    - x, y: (n,) arrays of nodal positions
+    - simlices: (m,3) connectivity matrix
+    - cvs: n-list of control volumes
+    - dt: float, time step
+    - N: total steps in the simulation. The initial position is the first step,
+         so only N-1 steps are simulated
+    - lambda_, mu: Lame parameters
+    - b: body force density
+    - t: traction
+    - rho: mass density of the system
+    - t_mask: (n,) boolean array of vertices to apply traction to. if None,
+              apply traction to right boundary
+    - boundary_mask: (n,) boolean array of nodes to update, ie NOT the clamped
+                     boundary. If None, clamp left edge, ie. False on left edge
+    
+    Outputs:
+    - points_t: (N,n,2) array of vertex positions for each step.
+    """
+    if boundary_mask is None:
+        boundary_mask = x != np.amin(x)
+    if t_mask is None:
+        t_mask = x == np.amax(x)
+
+    points = np.array((x,y)).T
+    v = np.zeros(points.shape)
+    points_t = np.zeros((N, *points.shape))
+    De0inv, m, f_ext, ft = calc_intial_stuff(x, y, simplices, b, rho,
+                                             t_mask, t)
+    m = m.reshape((m.size, 1))
+    points_t[0] = points
+    bar = Bar('simulating', max=N)
+    bar.next()
+    for n in range(1, N):
+        if y0 is not None:
+            points_t[n-1], v = floor_(points_t[n-1], y0=y0, v=v)
+        x, y = points_t[n-1].T
+        fe = calc_all_fe(x, y, simplices, cvs, De0inv, lambda_, mu)
+        f_total = ft + fe + f_ext
+        points_t[n], v = calc_next_time_step(points_t[n-1], v, m, f_total, dt,
+                                             boundary_mask)
+        
+        bar.next()
+    bar.finish()
+    return points_t
+
+
+def make_animation(points, simplices, frame_skip=100, padding=0.5, fps=12,
+                   outfile='video.mp4'):
+    """
+    Function to make an animation of the mesh.
+
+    inputs:
+    - points: (N,n,2) array of point positions. N is number of time steps, n is
+              number of points in mesh
+    - simplices: (m, 3) connectivity matrix. m is number of triangles in mesh
+    - frame_skip: number of frames to skip. So only show the M'th iteration of
+                  the simulation
+    - padding: padding to add to the sides of the axes object. Not currently
+               implemented
+    - fps: int, number of frames per second for the video
+    - outfile: filename to write the video to. Should include file extension
+               ".mp4"
+    """
+    dpi = 200
+    fig, ax = plt.subplots()
+    # x_all = points[:,:,0].flatten()
+    # y_all = points[:,:,1].flatten()
+    # xlims = [np.amin(x_all) - padding, np.amax(x_all) + padding]
+    # ylims = [np.amin(y_all) - padding, np.amax(y_all) + padding]
+    # ax.set_xlim(*xlims)
+    # ax.set_ylim(*ylims)
+    # ax.set_aspect('equal')
+    # l = ax.triplot(points[0,:,0],points[0,:,1], simplices)
+    writer = anim.FFMpegWriter(fps=fps)
+    bar = Bar('Writing movie', max=points.shape[0]//frame_skip)
+    with writer.saving(fig, outfile, dpi):
+        for n in range(0, points.shape[0], frame_skip):
+            point = points[n]
+            x, y = point.T
+            # ax.set_xlim(*xlims)
+            # ax.set_ylim(*ylims)
+            ax.set_aspect('equal')
+            ax.triplot(x, y, simplices)
+            writer.grab_frame()
+            ax.clear()
+            bar.next()
+    bar.finish()
+
+
+def floor_(points, y0, v):
     """ 
     Implement a "floor" for the simulation. If any node is below the floor, we
     put it to the floor and kill the vertical component of the velocity.
@@ -389,8 +398,10 @@ def floor(y, y0, v):
     - y: new vertical positions
     - v: new velocities
     """
-    below_floor = y >= y0
-    y[below_floor] = y0
+    below_floor = points[:,1] < y0
+    # if below_floor.any():
+    #     print('Some below!')
+    points[below_floor,1] = y0
     # only kill vertical component
-    v[below_floor, 1] = 0
-    return y, v
+    v[below_floor, 1] = 0 #-v[below_floor, 1]
+    return points, v

@@ -156,11 +156,11 @@ def write_to_mat(X, Y):
     sio.savemat(name, mdict={'X': X, 'Y': Y})
 
 
-def call_matlab(print_=False):
+def call_matlab(name='control_volumes', print_=False):
     cwd = os.getcwd()
     matlab = ['useful_functions', 'matlab']
     matlab_path = os.path.join(os.path.dirname(cwd), *matlab)
-    cmd_name = f"cd '{matlab_path}';process_data('{cwd}');exit;"
+    cmd_name = f"cd '{matlab_path}';process_data('{cwd}','{name}');exit;"
     args = f'-nodisplay -nosplash -nodesktop -r "{cmd_name}"'
     cmd = ['matlab', args]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)

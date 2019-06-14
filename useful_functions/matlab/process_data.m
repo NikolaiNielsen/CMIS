@@ -1,4 +1,4 @@
-function process_data(cwd)
+function process_data(cwd, outfile)
 
 % Load the "points.mat" file from the python cwd
 load(fullfile(cwd, 'points.mat'))
@@ -14,7 +14,10 @@ end
 Tr = delaunayTriangulation(X, Y);
 T = Tr.ConnectivityList;
 
+% Update X and Y if needed (delaunay may have deleted a point or two)
+X = Tr.Points(:,1);
+Y = Tr.Points(:,2);
 [TR CVs Bmask] = create_control_volumes(Tr, X, Y);
 
 % Save the control volumes in python cwd
-save(fullfile(cwd, 'control_volumes'), 'CVs', 'X', 'Y', 'T');
+save(fullfile(cwd, outfile), 'CVs', 'X', 'Y', 'T');
