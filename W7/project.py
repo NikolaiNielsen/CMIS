@@ -357,3 +357,19 @@ def calc_kin_energy(m, v):
     """
     lv = np.sum(v*v, axis=1)
     return np.sum(m*lv*0.5)
+
+
+def calc_momentum(m, v):
+    """
+    Calculates the total momentum of the system
+
+    inputs:
+    - m: (n,) array of nodal masses
+    - v: (n,2) array of nodal velocities
+
+    outputs:
+    - p: (2,) vector of total momentum
+    """
+
+    p = np.atleast_2d(m)*v
+    return np.sum(p, axis=0)
