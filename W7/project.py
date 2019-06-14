@@ -32,14 +32,13 @@ def calc_De(x, y, simplices):
     return De
 
 
-def calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1):
+def calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1, N=False):
     """
     Calculate the 1st Piola-Kirchhoff tensor based on the Lamé-parameters,
     material coordinate De0Inv and current spatial coordinates.
     """
     De = calc_De(x, y, simplices)
     Fe = De @ De0Inv
-
     Ee = np.zeros(Fe.shape)
     I = np.zeros(Ee.shape)
     for n, _ in enumerate(Ee):
@@ -47,6 +46,8 @@ def calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1):
         Ee[n] = (Fe[n].T @ Fe[n] - np.eye(2))/2
         I[n] = np.eye(2)
     tr = np.trace(Ee, axis1=1, axis2=2)
+    if N:
+        print(Fe)
     tr2 = np.atleast_3d(tr).reshape((simplices.shape[0],1,1))
     # second and first Piola-Kirchhoff stress tensors
     Se = lambda_ * tr2*I + 2*mu*Ee
@@ -68,7 +69,7 @@ def find_vertex_order(i, a, b, c):
         raise Exception('i must be equal to a, b or c')
 
 
-def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
+def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1, n=False):
     """
     Calculate elastic forces on each vertex
 
@@ -81,7 +82,7 @@ def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
     """
     N = x.size
     fe = np.zeros((N,2))
-    Pe = calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1)
+    Pe = calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1, N=n)
     
     for i in range(N):
         # For each vertex we need the neighbouring simplices:
@@ -104,7 +105,7 @@ def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1):
 
             # We don't need to scale Nej and Nek, since their length is already
             # the between the i'th and j/k'th node.
-            fi = 0.5*P@Nej +  0.5*P@Nek
+            fi = -0.5*P@Nej - 0.5*P@Nek
 
             # Debugging:
             # if i == 1:
@@ -317,7 +318,7 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
         boundary_mask = x != np.amin(x)
     if t_mask is None:
         t_mask = x == np.amax(x)
-
+    n_p = -1
     points = np.array((x,y)).T
     v = np.zeros(points.shape)
     points_t = np.zeros((N, *points.shape))
@@ -331,17 +332,16 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
         if y0 is not None:
             points_t[n-1], v = floor_(points_t[n-1], y0=y0, v=v)
         x, y = points_t[n-1].T
-        fe = calc_all_fe(x, y, simplices, cvs, De0inv, lambda_, mu)
+        fe = calc_all_fe(x, y, simplices, cvs, De0inv, lambda_, mu, n=True if n==n_p else False)
         f_total = ft + fe + f_ext
         points_t[n], v = calc_next_time_step(points_t[n-1], v, m, f_total, dt,
                                              boundary_mask)
-        
         bar.next()
     bar.finish()
     return points_t
 
 
-def make_animation(points, simplices, frame_skip=100, padding=0.5, fps=12,
+def make_animation(points, simplices, dt, frame_skip=1, padding=0.5, fps=12,
                    outfile='video.mp4'):
     """
     Function to make an animation of the mesh.
@@ -360,6 +360,7 @@ def make_animation(points, simplices, frame_skip=100, padding=0.5, fps=12,
     """
     dpi = 200
     fig, ax = plt.subplots()
+    fig.suptitle(f'dt: {dt}, N: {points.shape[0]}')
     # x_all = points[:,:,0].flatten()
     # y_all = points[:,:,1].flatten()
     # xlims = [np.amin(x_all) - padding, np.amax(x_all) + padding]

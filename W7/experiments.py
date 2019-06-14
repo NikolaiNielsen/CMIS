@@ -7,20 +7,27 @@ import fvm
 import project as proj
 
 
-def ex_simple(dt=1, N=10):
-    rho = lambda_ = mu = 1
+def ex_simple(dt=1, N=10, frameskip=1):
+    rho = 8100
+    E = 200e9
+    nu = 0.3
+    lambda_, mu = proj.calc_lame_parameters(E, nu)
     b = np.zeros(2)
-    t = 1e-2 * np.array((0, -1))
+    t = 1e-2 * np.array((0, -1)) * rho
     x, y, simplices, cvs = fvm.load_cvs_mat('control_volumes2.mat')
     points = proj.simulate(x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho)
-    fig, axes = plt.subplots()
-    # axes = axes.flatten()
-    # for n in range(N):
-    # x, y = points[-1].T
-    # axes.triplot(x, y, simplices)
-    # fig.tight_layout()
-    # plt.show()
-    proj.make_animation(points, simplices)
+    t_mask = x == np.amax(x)
+    De0, _, _, _ = proj.calc_intial_stuff(x, y, simplices, b, rho, t_mask, t)
+    
+    fig, ax = plt.subplots()
+    X, Y = points[-1].T
+    Pe = proj.calc_Pe(X, Y, simplices, De0, lambda_, mu, True)
+    ax.triplot(x, y, simplices)
+    ax.triplot(X, Y, simplices)
+    fig.tight_layout()
+    plt.show()
+
+    # proj.make_animation(points, simplices, dt, frameskip, fps=60)
 
 
 def ex_ball(dt=0.001, N=1000, frame_skip=1):
@@ -35,12 +42,7 @@ def ex_ball(dt=0.001, N=1000, frame_skip=1):
     boundary_mask = np.ones(x.size) == 1
     t_mask = ~boundary_mask
     points = proj.simulate(x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho, t_mask, boundary_mask, y0=0)
-    # axes = axes.flatten()
-    # for n in range(N):
-    # x, y = points[-1].T
-    # axes.triplot(x, y, simplices)
-    # fig.tight_layout()
-    # plt.show()
     proj.make_animation(points, simplices, fps=60, frame_skip=frame_skip, outfile='ball.mp4')
 
-ex_ball(N=1001, frame_skip=3)
+# ex_ball(N=1001, frame_skip=3)
+ex_simple(dt=0.002, N=5000, frameskip=10)
