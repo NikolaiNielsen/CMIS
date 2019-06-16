@@ -69,7 +69,7 @@ We then use the midpoint approximation rule and take $ \V{x} $ to be the value i
 \begin{equation}\label{key}
 	\int_{A_i} \rho_0 \ddot{\V{x}} \ud A = \rho_0 A_i \ddot{\V{x}}_i = m_i \ddot{\V{x}}_i
 \end{equation}
-where $ m_i $ is the ``nodal mass'', ie the mass attributed to each vertex/control volume. We give a similar treatment to the first term on the right hand side and use the midpoint rule with the value of $ \V{b}_0 $ at the $ i $'th vertex as the integrand. For the second term we just use the Gauss-divergence theorem to change the surface integral over the divergence, to a closed line integral, and then split up this line integral into piecewise continuous parts. This all gives us
+where $ m_i $ is the ``nodal mass'', ie the mass attributed to each vertex/control volume (if we do not assume a constant density, we would just have to use the midpoint approximation for the density as well, effectively setting the density constant over each element). We give a similar treatment to the first term on the right hand side and use the midpoint rule with the value of $ \V{b}_0 $ at the $ i $'th vertex as the integrand. For the second term we just use the Gauss-divergence theorem to change the surface integral over the divergence, to a closed line integral, and then split up this line integral into piecewise continuous parts. This all gives us
 \begin{equation}\label{key}
 	m_i \ddot{\V{x}} = f_i^{\text{body}} + \sum_{\gamma} \int_{S^e_{\gamma}}\V{P}\hat{\V{N}} \ud S
 \end{equation}
@@ -131,5 +131,31 @@ Note that we use an explicit updating scheme for the velocity, but an implicit u
 
 To evolve the system in time by one time step, we need to calculate the total forces, which entails computing all deformation gradients, to calculate all element stress tensors. With the total force on the $ i $'th vertex calculated, we can then update the position and velocity of this vertex.
 
-Note that this that all coupling between elements occur in computing the total forces (the elastic forces, actually), and we do not need to perform any matrix assembly and solving, in contrast to all the other weeks assignments (except for semi-lagrangian explicit time integration).
+Note that this that all coupling between elements occur in computing the total forces (the elastic forces, actually), and we do not need to perform any matrix assembly and solving, in contrast to all the other weeks assignments (except for semi-lagrangian impicit time integration).
+
+
+
+\section{Experiments}
+\subsection{Bending the bar}
+For the first experiment we repeat the bending of the bar from the experiments of the finite element method in week 5. We use the provided mesh from that week, attach the left end to a ``wall'' and apply a constant traction to the right end. We also neglect any body forces such as gravity, meaning the only forces are the traction and elastic forces.
+
+In attaching the left end to the wall we essentially negate all forces on these nodes (The wall exerts an equal force on the bar, so to speak), such that these nodes never move. In practice this means we just set the velocity for these nodes to 0, and never update them.
+
+At the start of the simulation, the bar is undeformed, which means $ \V{D}^e = \V{D}^e_0 $ and $ \V{F} = \V{I} $, so there will be no elastic forces on the bar, and the only motion will be due to the traction. As the system evolves, the bar will bend, and the elastic forces will increase in magnitude until they rival the traction, and the system experiences no acceleration. The bar will continue to overshoot this point, further increasing the deformation, but with decceleration, until the bar is ``fully bent''. At this point the bar will start to rectify itself until it reaches the starting location with a net upwards velocity but now only a downwards force.
+
+In essence, this is a harmonic oscillator, and should act as such. We therefore expect the bar to oscillate for eternity, as long as there is no dampening of the system, especially now that we employ a symplectic integrator, which conserves energy (for isolated systems, that is).
+
+
+
+\subsection{A bouncing ball}
+We can also use this method to simulate a bouncing ball. To do this we need a circular mesh, gravity and a procedure for handling collision with the floor.
+
+Applying gravity is easy: we just apply body force density of $ \rho_0\V{g}=\rho_0[0, -9.8]^T $. Next the procedure for the floor. When a ball hits a floor, the upwards momentum of the ball will die out (if the floor is perfectly rigid), causing the ball to compress. This introduces a deformation gradient and elastic forces in the vertical direction, counteracting the gravitational forces. At some point, these forces are greater than the gravitational pull, causing the ball to accelerate and jump back up.
+
+So whenever a vertex is at or under the floor (defined as the region below some $ y=y_0 $, taken to be $ 0 $ for simplicity), we push it back up to the floor and set its vertical component of velocity to 0. This then induces the deformation, hopefully creating the scenario described above.
+
+We should see conservation of energy in this case: At first, the energy is entirely stored as potential energ, given by $ mg(y-y_0) $. As the ball falls however, the potential energy is converted into kinetic energy, $ mv^2/2 $, until the ball reaches the floor, at which point the ball bounces, turning the downward momentum to upward momentum. The ball then deccelerates converting the kinetic energy back into potential energy.
+
+Of course, perfect energy conservation depends on whether or not the collision with the floor is elastic or inelastic. I have my doubts that it will be completely elastic due to the fact that we set the vertical velocity component to 0, killing off some of the systems kinetic energy. The hope is that this loss will be stored as ``potential'' energy in the elasticity of the ball. So hopefully we see a nice constant total energy, with potential and kinetic energy trading off each other, back and forth forever.
+
 \end{document}
