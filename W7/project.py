@@ -20,15 +20,11 @@ def calc_De(x, y, simplices):
     - x, y: (n,) arrays of nodal positions
     - simplices: (m,3) connectivity matrix
     """
-    triangles = mesh.all_triangles(simplices, x, y)
-    N, _, _ = triangles.shape
+    N = len(simplices)
     De = np.zeros((N, 2, 2))
-    for n, tri in enumerate(triangles):
-        i = 0
-        j = 1
-        k = 2
-        De[n, :, 0] = tri[j] - tri[i]
-        De[n, :, 1] = tri[k] - tri[i]
+    for n, simp in enumerate(simplices):
+        i, j, k = simp
+        De[n] = np.array(((x[j]-x[i], x[k]-x[i]), (y[j]-y[i], y[k]-y[i])))
     return De
 
 
@@ -41,6 +37,7 @@ def calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1, N=False):
     Fe = De @ De0Inv
     Ee = np.zeros(Fe.shape)
     I = np.zeros(Ee.shape)
+    Se = np.zeros(Fe.shape)
     for n, _ in enumerate(Ee):
         # Green strain tensor for each element
         Ee[n] = (Fe[n].T @ Fe[n] - np.eye(2))/2
@@ -93,8 +90,8 @@ def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1, n=False):
             _, j, k = find_vertex_order(i, *simp)
             xi, xj, xk = x[[i, j, k]]
             yi, yj, yk = y[[i, j, k]]
-            lij = np.sqrt((xi-xj)**2 + (yi-yj)**2)
-            lik = np.sqrt((xi-xk)**2 + (yi-yk)**2)
+            # lij = np.sqrt((xi-xj)**2 + (yi-yj)**2)
+            # lik = np.sqrt((xi-xk)**2 + (yi-yk)**2)
             Nej = -np.array((yi-yj, xj-xi))
             # lej = np.sqrt(np.sum(Nej**2))
             # Nej = Nej/lej
