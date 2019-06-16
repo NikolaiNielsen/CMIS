@@ -1,0 +1,135 @@
+\documentclass[sigconf]{acmart}
+% defining the \BibTeX command - from Oren Patashnik's original BibTeX documentation.
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08emT\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+% Remove the annoying stuff
+\settopmatter{printacmref=false} % Removes citation information below abstract
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+\pagestyle{plain} % removes running headers
+
+
+
+\usepackage{Nikolai}
+
+
+
+
+
+\begin{document}
+
+%
+% The "title" command has an optional parameter, allowing the author to define a "short title" to be used in page headers.
+\title{CMIS Project: Simulating hyper elastic materials}
+
+\author{Nikolai Plambech Nielsen}
+\email{lpk331@alumni.ku.dk}
+\affiliation{%
+  \institution{Niels Bohr Institute, University of Copenhagen}
+}
+
+
+\maketitle
+
+\section{Finite volume method for hyperelastic materials}
+In this assignment we look at simulating the dynamics of hyper elastic materials using the Finite Volume Method (FVM). Where we in hand-in 5 looked at the Cauchy momentum equation with the assumption $ \ddot{x}=0 $, we will in this assignment not neglect this term, and instead employ a simple time evolution of the system to find the solution.
+
+The governing equation is
+\begin{equation}\label{key}
+	\rho_0 \ddot{\V{x}} = \V{b}_0 + \grad_{0} \D \V{P}
+\end{equation}
+where $ \rho $ is the mass density, $ \V{b} $ is the body force density (gravity, viscosity), and $ \V{P} $ is the first Piola-Kirchhoff stress tensor. A subscript of zero means the function is dependent on material, or undeformed, coordinates, meaning the last term is the divergence of the first Piola-Kirchhoff stress tensor, in material coordinates.
+
+We impose boundary conditions on the system in the form of a nodal traction field, defined by
+\begin{equation}\label{key}
+	\V{P}\hat{\V{N}}=\V{t}
+\end{equation}
+where $ \hat{\V{N}} $ is the outward unit normal of the edge, in material coordinates, and $ \V{t} $ is a known traction field.
+
+In our discretization we use a triangular mesh as the computational domain, with median dual vertex centred control volumes. We further assume that the deformation gradient is constant over each triangular element, meaning we get a constant $ 2\times 2 $ matrix deformation gradient for each element. Of course, this approximation is not entirely physical, since it potentially introduces discontinuities at every element border, but it simplifies calculations immensely, and in any case, it approaches the correct solution as the density of elements approaches infinity.
+
+We further assume the mass density of the system to be constant, as we work with homogeneous materials, and only one at a time. 
+
+\subsection{Notation, nomenclature and the control volumes}
+As with many problems, a good notation is half the battle. As mentioned before, a subscript of 0 (or capital letters for stuff other than stress tensors) denotes material coordinates, whilst lower letters and no subscript denotes spatial coordinates. We denote a element edge on the boundary of the domain as free, if there is no traction field applied to it, and non-free if there is.
+
+The control volume we employ is slightly different than the centroid dual vertex centred control volume from last week. For each vertex $ i $, we join the incenters of each element $ e $ the vertex is a part of, to the midpoint between the vertex in question ($ i $), and the other vertices in the element $ j,k $ (see figure \textbf{ref} for a sample control volume). Using this control volume turns out to be beneficial for this governing equation with our approximations, as we shall soon see.
+
+We denote the line segments between edge midpoints and incenters of element $ e $ as $ S^e_{\alpha} $ and $ S^e_{\beta} $, and the line segments between the $ i $'th vertex and the midpoint between the $ i $'th and $ k $'th vertex as $ S^e_{ik} $. As such, the union of these four line segments constitutes a closed curve on the domain, going from vertex $ i $ to midpoint, to incenter, to midpoint and back to vertex $ i $.
+
+
+\subsection{Discretization}
+Next we integrate the governing equation over the $ i $'th control volume in material coordinates, giving
+\begin{equation}\label{key}
+	\int_{A_i} \rho_0 \ddot{\V{x}} \ud A = \int_{A_i} \V{b}_0 \ud A + \int_{A_i} \grad_0 \D \V{P} \ud A
+\end{equation}
+On the left hand side we exchange the order of integration and differentiation, which we can do due to the control volume having a fixed area (in material coordinates, that is. It will deform and change in spatial coordinates). Further, with the assumption that $ \rho_0 $ is a constant we get
+\begin{equation}\label{key}
+	\int_{A_i} \rho_0 \ddot{\V{x}} \ud A = \rho_0 \diff[\ud]{^2}{t^2}\int_{A_i} \V{x} \ud A
+\end{equation}
+We then use the midpoint approximation rule and take $ \V{x} $ to be the value in the center of the control volume, ie the position of the $ i $'th vertex, giving
+\begin{equation}\label{key}
+	\int_{A_i} \rho_0 \ddot{\V{x}} \ud A = \rho_0 A_i \ddot{\V{x}}_i = m_i \ddot{\V{x}}_i
+\end{equation}
+where $ m_i $ is the ``nodal mass'', ie the mass attributed to each vertex/control volume. We give a similar treatment to the first term on the right hand side and use the midpoint rule with the value of $ \V{b}_0 $ at the $ i $'th vertex as the integrand. For the second term we just use the Gauss-divergence theorem to change the surface integral over the divergence, to a closed line integral, and then split up this line integral into piecewise continuous parts. This all gives us
+\begin{equation}\label{key}
+	m_i \ddot{\V{x}} = f_i^{\text{body}} + \sum_{\gamma} \int_{S^e_{\gamma}}\V{P}\hat{\V{N}} \ud S
+\end{equation}
+where $ f_i^{\text{body}} =A_i\V{b}_0$ is the total body force on the control volume, and $ \gamma $ runs over all edges of the control volume ($ \alpha, \beta$ for each element).
+
+If $ S^e_{\gamma} $ is on the boundary of the domain, then it is either free or non-free. In the free case $ \V{P}\hat{\V{N}} =\V{t}=0$ and the integral vanishes. In the non-free case the integral is just $ \V{t}l^e_{\gamma}$, where $ l^e_{\gamma} $ is the length of $ S^e_{\gamma} $ ($ \V{t} $ is constant over the edge, so goes outside the integral, and the integral of 1 is just the edge length).
+
+With this we can split up the piecewise integral further into boundary edges and inner edges. The integral over inner edges can be calculated without even using the $ \alpha, \beta $ edges if we utilize the closed contour mentioned before. Since we assume that the tensor $ \V{P} $ is constant over each element, the integral of a closed contour on the element is zero (like that of a gradient or any field with a vanishing curl):
+\begin{equation}\label{key}
+	\oint_S \V{P}^e\hat{\V{N}} \ud S = 0
+\end{equation}
+Now we let $ S = S^e_{ji} \cup S^e_{ik} \cup S^e_{\alpha} \cup S^e_{\beta} $, giving
+\begin{equation}\label{key}
+	\V{f}^e_i = \int_{S^e_{\alpha} \cup S^e_{\beta}} \V{P}^e\hat{\V{N}} \ud S = -\int_{S^e_{ji} \cup S^e_{ik}} \V{P}^e\hat{\V{N}} \ud S
+\end{equation}
+Next we note that $ \V{P}^e $ is constant by assumption (the deformation gradient is constant, giving a constant stress tensor), and $ \hat{\V{N}} $ is constant along each straight edge, so $ \V{f}^e_i $ is given by
+\begin{equation}\label{key}
+\V{f}^e_i = -\frac{1}{2} \V{P}^e \hat{\V{N}}^e_{ji}l_{ji} - \frac{1}{2} \V{P}^e\hat{\V{N}}^e_{ik}l_{ik}
+\end{equation}
+with $ l_{ik} = |\V{x}_k - \V{x}_i|$. Computations can be saved by noting that $ \hat{\V{N}}^e_{ji} l_{ji} $ is just the vector $ \V{x}_i-\V{x}_j $ rotated by 90 degrees, such that it points outward of the element (counter clockwise). Likewise with $ \hat{\V{N}}^e_{ik} l_{ik} $ being $ \V{x}_k -\V{x}_i$ rotated 90 degrees counter clockwise (note the order of the indices, first index is starting point, last index is ending point).
+
+Putting all of this together, we get the final equation of motion for the $ i $'th vertex:
+\begin{equation}\label{key}
+	m_i \ddot{\V{x}}_i = \V{f}_i^{\text{body}} + \V{f}_i^t +\V{f}^E_i, \quad \V{f}^t_i = \sum_{\gamma}   \V{t}l^e_{\gamma}, \quad \V{f}^E_i = \sum_e \V{f}^e_i
+\end{equation}
+where $ \V{f}^t_i $ is the total traction force, made up of contributions from each non-free boundary edge, and $ \V{f}^E_i $ is the total elastic force, made up of contributions from each element of the $ i $'th control volume (ie, all elements the $ i $'th vertex is a part of).
+
+Now, this is all well and good, but we still have not calculated the first Piola-Kirchhoff stress tensor $ \V{P} $. The tensor is given by $ \V{P} = \V{F}\V{S} $, with $ \V{F} $ being the deformation gradient and $ \V{S} $ being the second Piola-Kirchhoff sress tensor. This is given by
+\begin{equation}\label{key}
+	\V{S} = \lambda \tr (\V{E}) \V{I} + 2 \mu \V{E}, \quad \V{E} = \frac{1}{2} (\V{F}^T \V{F} - \V{I})
+\end{equation}
+where $ \V{E} $ is the Green strain tensor and $ \lambda, \mu $ are the first and second Lame coefficient, which can be calculated from the Young Modulus $ E $ and Poisson Ratio $ \nu $ by
+\begin{equation}\label{key}
+	\lambda = \frac{E\nu}{(1+\nu)(1-2\nu)}, \quad \mu = \frac{E}{2(1+\mu)}.
+\end{equation}
+The can has been kicked down the road long enough now, we just need the deformation gradient for each element, then we are golden. The deformation gradient is what takes the material coordinates to the spatial coordinates, and since we assume the deformation gradient to be constant, we can find it quite simply. For the $ e $'th element we define $ \V{g}_{ij}^e =\V{x}_j - \V{X}_i,\V{G}_{ij}^e =\V{X}_j - \V{X}_i $. These vectors are related by the deformation gradient with
+\begin{equation}\label{key}
+	\V{g}_{ij}^e = \V{F}^e \V{G}^e_{ij}
+\end{equation}
+So if we let $ \V{D}^e = [\V{g}^e_{ij}\ \V{g}^e_{ik}], \V{D}^e_0 =  [\V{G}^e_{ij}\ \V{G}^e_{ik}]$ we get
+\begin{equation}\label{key}
+	\V{D}^e = \V{F}^e \V{D}^e_0, \quad \V{F}^e = \V{D}^e (\V{D}^e_0)\inverse
+\end{equation}
+This has the advantage that the matrix inverse is only dependent on the material coordinates, which by definition are constant - so these matrices can be precomputed!
+
+With all of this done we are now in a position where we can calculate the total forces on each vertex for a given time step. All we then need is to update the positions of the vertices to evolve the system in time. For this we employ a semi-implicit first order finite difference approximation.
+
+We let $ \V{v}_i = \dot{\V{x}}_i $, giving us a pair of coupled first order ODEs by
+\begin{align}\label{key}
+	\dot{\V{v}}_i &= \frac{1}{m_i} \V{f}_i^{\text{total}} = \frac{1}{m_i}(\V{f}^{\text{body}}_i + \V{f}^t_i + \V{f}^E_i), \\
+	\dot{\V{x}}_i &= \V{v}_i.
+\end{align}
+With the FDM approximation giving
+\begin{align}\label{key}
+	\V{v}_i^{t+\Delta t} &= \V{v}_i^{t} + \frac{\Delta t}{m_i} \V{f}^{\text{total}}_i, \\
+	\V{x}_i^{t+\Delta t} &= \V{x}_i^t +\Delta t \V{v}_i^{t+\Delta t}.
+\end{align}
+Note that we use an explicit updating scheme for the velocity, but an implicit updating scheme for the position, hence the name ``semi-implicit time integration''.
+
+To evolve the system in time by one time step, we need to calculate the total forces, which entails computing all deformation gradients, to calculate all element stress tensors. With the total force on the $ i $'th vertex calculated, we can then update the position and velocity of this vertex.
+
+Note that this that all coupling between elements occur in computing the total forces (the elastic forces, actually), and we do not need to perform any matrix assembly and solving, in contrast to all the other weeks assignments (except for semi-lagrangian explicit time integration).
+\end{document}
