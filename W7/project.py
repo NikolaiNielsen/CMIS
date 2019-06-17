@@ -357,7 +357,8 @@ def make_animation(points, simplices, dt, lims=None, frame_skip=1, padding=0.5,
     """
     dpi = 200
     fig, ax = plt.subplots()
-    fig.suptitle(f'dt: {dt}, N: {points.shape[0]}')
+    N = points.shape[0]
+    Times = np.cumsum(dt*np.ones(N))
     if lims is not None:
         xlims, ylims = lims
     # x_all = points[:,:,0].flatten()
@@ -379,6 +380,7 @@ def make_animation(points, simplices, dt, lims=None, frame_skip=1, padding=0.5,
                 ax.set_ylim(*ylims)
             ax.set_aspect('equal')
             ax.triplot(x, y, simplices)
+            ax.set_title(f'T: {Times[n]:.2f} s')
             writer.grab_frame()
             ax.clear()
             bar.next()
