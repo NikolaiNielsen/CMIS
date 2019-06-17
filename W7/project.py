@@ -79,7 +79,7 @@ def calc_all_fe(x, y, simplices, cvs, De0Inv, lambda_=1, mu=1, n=False):
     """
     N = x.size
     fe = np.zeros((N,2))
-    Pe = calc_Pe(x, y, simplices, De0Inv, lambda_=1, mu=1, N=n)
+    Pe = calc_Pe(x, y, simplices, De0Inv, lambda_=lambda_, mu=mu, N=n)
     
     for i in range(N):
         # For each vertex we need the neighbouring simplices:
