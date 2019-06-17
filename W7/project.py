@@ -338,8 +338,8 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
     return points_t
 
 
-def make_animation(points, simplices, dt, frame_skip=1, padding=0.5, fps=12,
-                   outfile='video.mp4'):
+def make_animation(points, simplices, dt, lims=None, frame_skip=1, padding=0.5, 
+                   fps=12, outfile='video.mp4'):
     """
     Function to make an animation of the mesh.
 
@@ -358,6 +358,8 @@ def make_animation(points, simplices, dt, frame_skip=1, padding=0.5, fps=12,
     dpi = 200
     fig, ax = plt.subplots()
     fig.suptitle(f'dt: {dt}, N: {points.shape[0]}')
+    if lims is not None:
+        xlims, ylims = lims
     # x_all = points[:,:,0].flatten()
     # y_all = points[:,:,1].flatten()
     # xlims = [np.amin(x_all) - padding, np.amax(x_all) + padding]
@@ -372,8 +374,9 @@ def make_animation(points, simplices, dt, frame_skip=1, padding=0.5, fps=12,
         for n in range(0, points.shape[0], frame_skip):
             point = points[n]
             x, y = point.T
-            # ax.set_xlim(*xlims)
-            # ax.set_ylim(*ylims)
+            if lims is not None:
+                ax.set_xlim(*xlims)
+                ax.set_ylim(*ylims)
             ax.set_aspect('equal')
             ax.triplot(x, y, simplices)
             writer.grab_frame()
