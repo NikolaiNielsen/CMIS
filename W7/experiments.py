@@ -57,10 +57,10 @@ def ex_simple(dt=1, N=10, frameskip=1):
 
 
 def ex_ball():
-    rho = 1
-    nu = 0.4
+    rho = 10
+    nu = 0.3
     E = 1000
-    N_frames = 1500
+    N_frames = 500
     T = 1.5
     K = 1e-3
     dt = K*np.sqrt(rho/E)
@@ -214,13 +214,84 @@ def ex_double_bending():
     
 
 def ex_hex():
-    x = np.array((0, 1, 3/2, 1/2, 1, 0, -1/2))
-    y = np.array((0, 0, np.sqrt(3)/2, np.sqrt(3)/2, np.sqrt(3), np.sqrt(3), np.sqrt(3)/2))
-    T = Delaunay(np.array((x,y)).T).simplices
-    cvs = None
-    fig, ax = plt.subplots()
-    ax.triplot(x,y,T)
-    ax.set_scale('equal')
-    plt.show()
+    h = 0.2
+    
+    T = 3
+    K = 1e-3
+    N_frames = 500
 
-ex_hex()
+    E, nu = 1e3, 0.3
+    rho = 10
+    lambda_, mu = proj.calc_lame_parameters(E, nu)
+    dt = K*np.sqrt(rho/E)
+    N = np.ceil(T/dt).astype(int)
+    b = np.array((0, -1))*rho
+    if N < N_frames:
+        frame_skip = 1
+    else:
+        frame_skip = np.floor(N/N_frames).astype(int)
+
+    x = np.array((0, 1, 3/2, 1/2, 1, 0, -1/2))-(1/2)
+    y = np.array((0, 0, np.sqrt(3)/2, np.sqrt(3)/2,
+                 np.sqrt(3), np.sqrt(3), np.sqrt(3)/2))+h
+    simp = Delaunay(np.array((x,y)).T).simplices
+    cvs = None
+    y0=0
+    lims = np.array(((np.amin(x), np.amax(x)), (-0.5, np.amax(y))))
+
+    
+    t = np.zeros(2)
+    boundary_mask = x != 10
+    
+    De0inv, m, f_ext, _ = proj.calc_intial_stuff(x, y, simp, b, rho,
+                                                  boundary_mask, t)
+    m = m.reshape((m.size, 1))
+
+    v = np.zeros((x.size, 2))
+    p = np.array((x, y)).T
+    points = np.zeros((N, x.size, 2))
+    points[0] = p
+    fes = np.zeros((N, x.size, 2))
+    bar = Bar('Simulating', max=N)
+    for n in range(1, N):
+        points[n-1], v = proj.floor_(points[n-1], y0=y0, v=v)
+        x, y = points[n-1].T
+        fe = proj.calc_all_fe(x, y, simp, cvs, De0inv, lambda_, mu)
+        f_total = fe + f_ext
+        fes[n] = fe
+        points[n], v = proj.calc_next_time_step(
+            points[n-1], v, m, f_total, dt, boundary_mask)
+        bar.next()
+    bar.finish()
+    np.save('bent_hex', points[[0,-1]])
+
+    outfile = 'hex.mp4'
+    fps = 60
+    dpi = 200
+    fig, ax = plt.subplots()
+    fig.suptitle(f'dt: {dt}, N: {points.shape[0]}')
+
+    
+    if lims is not None:
+        xlims, ylims = lims
+
+    writer = anim.FFMpegWriter(fps=fps)
+    bar = Bar('Writing movie', max=points.shape[0]//frame_skip)
+    with writer.saving(fig, outfile, dpi):
+        for n in range(0, points.shape[0], frame_skip):
+            point = points[n]
+            x, y = point.T
+            fe = fes[n]
+            fex, fey = fe.T
+            if lims is not None:
+                ax.set_xlim(*xlims)
+                ax.set_ylim(*ylims)
+            ax.set_aspect('equal')
+            ax.quiver(x, y, fex, fey)
+            ax.triplot(x, y, simp)
+            writer.grab_frame()
+            ax.clear()
+            bar.next()
+    bar.finish()
+
+ex_ball()
