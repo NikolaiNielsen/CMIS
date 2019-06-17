@@ -57,11 +57,15 @@ def ex_simple(dt=1, N=10, frameskip=1):
 
 
 def ex_ball():
+    h = 0.5
+    g = 1
+    n_bounces = 2
+    T = n_bounces*2*np.sqrt(2*h/g)
     rho = 10
     nu = 0.3
     E = 1000
     N_frames = 500
-    T = 1.5
+
     K = 1e-3
     dt = K*np.sqrt(rho/E)
     N = np.ceil(T/dt).astype(int)
@@ -71,9 +75,9 @@ def ex_ball():
         frame_skip = np.floor(N/N_frames).astype(int)
     
     lambda_, mu = proj.calc_lame_parameters(E, nu)
-    b = np.array((0, -1))*rho
+    b = np.array((0, -g))*rho
     x, y, simplices, cvs = fvm.load_cvs_mat('ball.mat')
-    y = y-(5-1.02)
+    y = y-(4-h)
     t = np.zeros(2)
     boundary_mask = np.ones(x.size) == 1
     t_mask = ~boundary_mask
