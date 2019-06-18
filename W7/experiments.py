@@ -35,34 +35,42 @@ def ex_steel(dt=1, N=10, frameskip=1):
     # proj.make_animation(points, simplices, dt, frameskip, fps=60)
 
 
-def ex_simple(dt=1, N=10, frameskip=1):
+def ex_simple():
     rho = 10
     E = 1000
     nu = 0.3
+    T = 2
+    K = 1e-3
+    dt = K*np.sqrt(rho/E)
+    N = np.ceil(T/dt).astype(int)
+    N_frames = 500
+    if N < N_frames:
+        frame_skip = 1
+    else:
+        frame_skip = np.floor(N/N_frames).astype(int)
     lambda_, mu = proj.calc_lame_parameters(E, nu)
     b = np.zeros(2)
     t = 1e-2 * np.array((0, -1)) * rho
     x, y, simplices, cvs = fvm.load_cvs_mat('control_volumes2.mat')
-    points = proj.simulate(x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho)
-    np.save('bent', points[-1])
-    t_mask = x == np.amax(x)
-    De0, _, _, _ = proj.calc_intial_stuff(x, y, simplices, b, rho, t_mask, t)
-    
-    fig, ax = plt.subplots()
-    X, Y = points[-1].T
-    Pe = proj.calc_Pe(X, Y, simplices, De0, lambda_, mu, True)
-    ax.triplot(x, y, simplices)
-    ax.triplot(X, Y, simplices)
-    fig.tight_layout()
-    plt.show()
-
+    points, E_pot, E_kin, E_str, momentum = proj.simulate(
+        x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho)
+    x_all = points[:, :, 0].flatten()
+    y_all = points[:, :, 1].flatten()
+    xmax = np.amax(x_all)
+    xmin = np.amin(x_all)
+    ymin = np.amin(y_all)
+    ymax = np.amax(y_all)
+    limits = np.array(((xmin, xmax), (ymin, ymax)))
+    proj.make_animation(points, simplices, dt, [E_pot, E_kin], y0=0,
+                        lims=limits, frame_skip=frame_skip, fps=60,
+                        outfile='bar.mp4', save=True)
     # proj.make_animation(points, simplices, dt, frameskip, fps=60)
 
 
 def ex_ball():
-    h = 0.5
+    h = 0.3
     g = 1
-    n_bounces = 2
+    n_bounces = 3
     T = n_bounces*2*np.sqrt(2*h/g)
     rho = 10
     nu = 0.3
@@ -88,7 +96,17 @@ def ex_ball():
         x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho, t_mask,
         boundary_mask, y0=0)
     E_pot = E_pot*g
-    np.savez('ball_stuff', *[points, E_pot, E_kin, E_str])
+    x_all = points[:, :, 0].flatten()
+    y_all = points[:, :, 1].flatten()
+    xmax = np.amax(x_all)
+    xmin = np.amin(x_all)
+    ymin = np.amin(y_all)
+    ymax = np.amax(y_all)
+    limits = np.array(((xmin, xmax), (ymin, ymax)))
+    proj.make_animation(points, simplices, dt, [E_pot, E_kin], y0=0,
+                        lims=limits, frame_skip=frame_skip, fps=60,
+                        outfile='ball.mp4',save=True)
+    # np.savez('ball_stuff', *[points, E_pot, E_kin, E_str])
 
 
     # proj.make_animation(points, simplices, dt, fps=60, frame_skip=frame_skip, outfile='ball.mp4')
@@ -385,5 +403,6 @@ def ex_hex():
 
 
 # ex_ball()
+ex_simple()
 # ex_hex()
-ex_debug()
+# ex_debug()
