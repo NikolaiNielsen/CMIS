@@ -36,7 +36,10 @@ def ex_steel(dt=1, N=10, frameskip=1):
 
 
 def ex_simple(dt=1, N=10, frameskip=1):
-    rho = lambda_ = mu = 1
+    rho = 10
+    E = 1000
+    nu = 0.3
+    lambda_, mu = proj.calc_lame_parameters(E, nu)
     b = np.zeros(2)
     t = 1e-2 * np.array((0, -1)) * rho
     x, y, simplices, cvs = fvm.load_cvs_mat('control_volumes2.mat')
@@ -81,8 +84,73 @@ def ex_ball():
     t = np.zeros(2)
     boundary_mask = np.ones(x.size) == 1
     t_mask = ~boundary_mask
-    points = proj.simulate(x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho, t_mask, boundary_mask, y0=0)
-    proj.make_animation(points, simplices, dt, fps=60, frame_skip=frame_skip, outfile='ball.mp4')
+    points, E_pot, E_kin, E_str, momentum = proj.simulate(
+        x, y, simplices, cvs, dt, N, lambda_, mu, b, t, rho, t_mask,
+        boundary_mask, y0=0)
+    E_pot = E_pot*g
+    np.savez('ball_stuff', *[points, E_pot, E_kin, E_str])
+
+
+    # proj.make_animation(points, simplices, dt, fps=60, frame_skip=frame_skip, outfile='ball.mp4')
+
+
+def plot_ball():
+
+    x, y, simplices, _ = fvm.load_cvs_mat('ball.mat')
+    
+    h = 0.5
+    g = 1
+    n_bounces = 2
+    T = n_bounces*2*np.sqrt(2*h/g)
+    rho = 10
+    nu = 0.3
+    E = 1000
+    N_frames = 500
+
+    K = 1e-3
+    dt = K*np.sqrt(rho/E)
+    N = np.ceil(T/dt).astype(int)
+    if N < N_frames:
+        frame_skip = 1
+    else:
+        frame_skip = np.floor(N/N_frames).astype(int)
+    _, m, _, _ = proj.calc_intial_stuff(x, y, simplices, rho)
+
+    points, E_pot, E_kin, E_str = np.load('ball_almost_fail.npz').values()
+    #e_p = proj.calc_pot_energy(m.reshape((m.size,1)), y)
+    E_pot = E_pot
+    x_all = points[:,:,0].flatten()
+    y_all = points[:,:,1].flatten()
+    xmax = np.amax(x_all)
+    xmin = np.amin(x_all)
+    ymin = np.amin(y_all)
+    ymax = np.amax(y_all)
+    limits = np.array(((xmin, xmax),(ymin, ymax)))
+    proj.make_animation(points, simplices, dt, [E_pot, E_kin], y0=0,
+                        lims=limits, frame_skip=frame_skip, fps=60,
+                        outfile='ball1.mp4')
+
+    # x, y = points[-1].T
+
+    # Times = np.cumsum(dt*np.ones(N))
+    # fig, (ax1, ax2) = plt.subplots(nrows=2,
+    #                                gridspec_kw={'height_ratios': [2, 1]})
+    # # ax1.set_xlim(xmin, xmax)
+    # # ax1.set_ylim(ymin, ymax)
+    # ax1.plot([xmin, xmax], [0,0], '--')
+    # ax1.triplot(x, y, simplices)
+    # ax1.set_aspect('equal')
+
+    # ax2.plot(Times, E_kin+E_pot+E_str, label='$E_{total}$')
+    # ax2.plot(Times, E_pot, label='$E_{pot}$')
+    # ax2.plot(Times, E_kin, label='$E_{kin}$')
+    # ax2.plot(Times, E_str, label='$E_{str}$')
+    
+    
+    # ax2.axvline(x=Times[10000], linestyle='--', color='k')
+    # ax2.legend()
+    # fig.tight_layout()
+    # plt.show()
 
 
 def ex_debug():
@@ -218,9 +286,9 @@ def ex_double_bending():
     
 
 def ex_hex():
-    h = 0.2
+    h = 0.8
     
-    T = 3
+    T = 10
     K = 1e-3
     N_frames = 500
 
@@ -241,61 +309,26 @@ def ex_hex():
     simp = Delaunay(np.array((x,y)).T).simplices
     cvs = None
     y0=0
-    lims = np.array(((np.amin(x), np.amax(x)), (-0.5, np.amax(y))))
+    # lims = np.array(((np.amin(x), np.amax(x)), (np.amax(y))))
 
     
     t = np.zeros(2)
     boundary_mask = x != 10
     
-    De0inv, m, f_ext, _ = proj.calc_intial_stuff(x, y, simp, b, rho,
-                                                  boundary_mask, t)
-    m = m.reshape((m.size, 1))
+    points, E_pot, E_kin, _,_ = proj.simulate(x, y, simp, cvs, dt, N, lambda_,
+                                              mu, b, t, rho, boundary_mask,
+                                              boundary_mask, y0) 
+    x_all = points[:, :, 0].flatten()
+    y_all = points[:, :, 1].flatten()
+    xmax = np.amax(x_all)
+    xmin = np.amin(x_all)
+    ymin = np.amin(y_all)
+    ymax = np.amax(y_all)
+    limits = np.array(((xmin, xmax), (ymin, ymax)))
+    proj.make_animation(points, simp, dt, [E_pot, E_kin], y0=y0,
+                        lims=limits, frame_skip=frame_skip, fps=60,
+                        outfile='hex3.mp4')
 
-    v = np.zeros((x.size, 2))
-    p = np.array((x, y)).T
-    points = np.zeros((N, x.size, 2))
-    points[0] = p
-    fes = np.zeros((N, x.size, 2))
-    bar = Bar('Simulating', max=N)
-    for n in range(1, N):
-        points[n-1], v = proj.floor_(points[n-1], y0=y0, v=v)
-        x, y = points[n-1].T
-        fe = proj.calc_all_fe(x, y, simp, cvs, De0inv, lambda_, mu)
-        f_total = fe + f_ext
-        fes[n] = fe
-        points[n], v = proj.calc_next_time_step(
-            points[n-1], v, m, f_total, dt, boundary_mask)
-        bar.next()
-    bar.finish()
-    np.save('bent_hex', points[[0,-1]])
 
-    outfile = 'hex.mp4'
-    fps = 60
-    dpi = 200
-    fig, ax = plt.subplots()
-    fig.suptitle(f'dt: {dt}, N: {points.shape[0]}')
-
-    
-    if lims is not None:
-        xlims, ylims = lims
-
-    writer = anim.FFMpegWriter(fps=fps)
-    bar = Bar('Writing movie', max=points.shape[0]//frame_skip)
-    with writer.saving(fig, outfile, dpi):
-        for n in range(0, points.shape[0], frame_skip):
-            point = points[n]
-            x, y = point.T
-            fe = fes[n]
-            fex, fey = fe.T
-            if lims is not None:
-                ax.set_xlim(*xlims)
-                ax.set_ylim(*ylims)
-            ax.set_aspect('equal')
-            ax.quiver(x, y, fex, fey)
-            ax.triplot(x, y, simp)
-            writer.grab_frame()
-            ax.clear()
-            bar.next()
-    bar.finish()
-
-ex_ball()
+# ex_ball()
+ex_hex()
