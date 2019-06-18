@@ -28,8 +28,37 @@
 
 
 \maketitle
+\section{Finite Volume Method in general (L6A, L6B)}
+The finite volume method is the third major discretization method used for solving PDEs. Where the finite difference method tackles the governing equation head-on, approximating the derivatives by finite differences between values on a regular grid; the finite volume method instead opts to rewrite the problem in terms of a finite number of volume integrals and approximating these instead. This is reminiscent of the finite element method, where the problem is also written in integral form, but where trial and shape functions are also introduced as well. FVM instead approximates the integrals directly without any interpolation as is done with the FEM.
 
-\section{Finite volume method for hyperelastic materials}
+The whole idea behind FVM is then, as said, to integrate the governing equation over some fixed volume, the computational domain. We can then further split this volume up into sub-volumes, called control volumes. This works due to a simple fact about integrals, which echo what we already know.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{fvm.png}
+	\caption{A volume split into two, which splits the surface into 3 parts. Sum of integrals over the individual volumes will sum up to exactly the same as integrals over the entire volume. This is the foundation of the finite volume method.}
+	\label{fig:fvm}
+\end{figure}
+
+Say we have a volume $ V $, which we split into two parts, such that $ V= V_a\cup V_b$ (see figure \ref{fig:fvm}), then the volume integral over the whole volume can be split into two:
+\begin{equation*}\label{key}
+	\int_{V} f(\V{x}) \ud V = \int_{V_a \cup V_b} f(\V{x}) \ud V = \int_{V_a}f(\V{x}) \ud V + \int_{V_b} f(\V{x}) \ud V.
+\end{equation*}
+Likewise, the surface of the volume, $ S $ is split into two such that $ S = S_a \cup S_b $, but the splitting of the volume introduces a new surface, $ S_{ab} $, such that the surface of $ V_a $ is $ \partial V_a = S_a \cup S_{ab} $ and $ \partial V_b = S_b \cup S_{ab} $. The two volume integrals sum up to the volume integral of the whole domain, likewise, the surface integrals will too:
+\begin{align*}\label{key}
+	\int_{\partial V_a \cup \partial V_b} \V{f}(\V{x})\D \V{n} \ud S &= \int_{\partial V_a}  + \int_{\partial V_b}  \\
+	&= \int_{S_a}+\int_{S_{ab}}+\int_{S_b} - \int_{S_{ab}}\\
+	& = \int_{S_a\cup S_b} \\
+	&= \int_S 
+\end{align*}
+where we have omitted the integrands and merely represented the integrals schematically. Furthermore there is a minus in front of the second integral over $ S_{ab} $ since for one control volume the surface normal points one way, and for the other it is flipped, leading to the same integral, but with a different sign.
+
+
+This all means, when we split up the domain into smaller control volumes, we are guaranteed that the sum over all integrals will give the exact same solution as integrating over the whole volume in the first place. Looking at this from the view of continuity equations gives us a nice picture: The integral over the whole volume is a global conservation law, whilst the integrals over the control volumes constitutes local conservation laws.
+
+In fact, this is all just a restating of the fact that the governing equation must be valid over the whole domain, so of course it will also, by definition, be valid over each control volume.
+
+\section{Finite volume method for hyper elastic materials}
 In this assignment we look at simulating the dynamics of hyper elastic materials using the Finite Volume Method (FVM). Where we in hand-in 5 looked at the Cauchy momentum equation with the assumption $ \ddot{x}=0 $, we will in this assignment not neglect this term, and instead employ a simple time evolution of the system to find the solution.
 
 The governing equation is
