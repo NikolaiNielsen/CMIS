@@ -153,6 +153,11 @@ def plot_ball():
     # plt.show()
 
 
+def calc_pot_energy_tri(p, p0, k=1):
+    r = p-p0
+    l = np.sum(r**2)
+    return 3/2 * k * l
+
 def ex_debug():
     X = np.array((0, 1, 0.5))
     Y = np.array((0, 0, np.sqrt(3)/2))
@@ -168,7 +173,7 @@ def ex_debug():
     x = x+v[0]
     y = y+v[1]
     i = i+v
-    lims = np.array(((np.amin(x), np.amax(x)), (np.amin(y), np.amax(y))))
+    # lims = np.array(((np.amin(x), np.amax(x)), (np.amin(y), np.amax(y))))
 
     E, nu = 1e3, 0.3
     rho = 10
@@ -182,16 +187,28 @@ def ex_debug():
     De0inv, m, f_ext, ft = proj.calc_intial_stuff(X, Y, T, b, rho, mask, t)
     m = m.reshape((3, 1))
     lambda_, mu = proj.calc_lame_parameters(E, nu)
+    fe = proj.calc_all_fe(x, y, T, cvs, De0inv, lambda_, mu)
 
+    k = 1/2 * (a*a+1)*(lambda_ + mu)
+
+    T0 = 1
     K = 5e-3
     dt = K*np.sqrt(rho/E)
-    N = np.ceil(1/dt).astype(int)*20
+    N = np.ceil(T0/dt).astype(int)
     v = np.zeros((3, 2))
     p = np.array((x, y)).T
     points = np.zeros((N, 3, 2))
+    E_kin = np.zeros(N)
+    E_pot = np.zeros(N)
+    E_str = np.zeros(N)
+    E_kin[0] = proj.calc_kin_energy(m, v)
+    E_pot[0] = calc_pot_energy_tri(np.array((x[0], y[0])), np.zeros(2), k)
+    # E_pot[0] = proj.calc_pot_energy(m, y)
+    E_str[0] = proj.calc_strain_energy(x, y, T, De0inv, lambda_, mu)
     points[0] = p
     fes = np.zeros((N, 3, 2))
     bar = Bar('Simulating', max=N)
+    bar.next()
     for n in range(1, N):
         x, y = points[n-1].T
         fe = proj.calc_all_fe(x, y, T, cvs, De0inv, lambda_, mu)
@@ -199,38 +216,75 @@ def ex_debug():
         fes[n] = f_total
         points[n], v = proj.calc_next_time_step(
             points[n-1], v, m, f_total, dt, bmask)
+        E_kin[n] = proj.calc_kin_energy(m, v)
+        x, y = points[n].T
+        # E_str[n] = proj.calc_strain_energy(x, y, T, De0inv, lambda_, mu)
+        E_pot[n] = calc_pot_energy_tri(np.array((x[0], y[0])), np.zeros(2), k)
+        # E_pot[n] = proj.calc_pot_energy(m, y)
         bar.next()
     bar.finish()
 
-    outfile = 'triangle.mp4'
-    frame_skip = 60
-    fps = 60
+    N_frames = 500
+    if N < N_frames:
+        frame_skip = 1
+    else:
+        frame_skip = np.floor(N/N_frames).astype(int)
+    x_all = points[:, :, 0].flatten()
+    y_all = points[:, :, 1].flatten()
+    xmax = np.amax(x_all)
+    xmin = np.amin(x_all)
+    ymin = np.amin(y_all)
+    ymax = np.amax(y_all)
+    limits = np.array(((xmin, xmax), (ymin, ymax)))
+    outfile = 'triangle2.mp4'
     dpi = 200
-    fig, ax = plt.subplots()
-    fig.suptitle(f'dt: {dt}, N: {points.shape[0]}')
-    if lims is not None:
-        xlims, ylims = lims
 
+    fps = 60
+    padding = 0.2
+    xlims, ylims = limits
+    padding = np.array((-padding, padding))
+    xlims = xlims + padding
+    ylims = ylims + padding
+    Times = np.cumsum(dt*np.ones(N))
+    fig, (ax, ax2) = plt.subplots(nrows=2,
+                                gridspec_kw={'height_ratios': [2, 1]})
+    # ax2.plot(Times, E_kin+E_pot, label='$E_{total}$')
+    # ax2.plot(Times, E_pot, label='$E_{pot}$')
+    # ax2.plot(Times, E_kin, label='$E_{kin}$')
+    # ax2.legend()
+    # plt.show()
     writer = anim.FFMpegWriter(fps=fps)
     bar = Bar('Writing movie', max=points.shape[0]//frame_skip)
+    ran = list(range(0,points.shape[0], frame_skip))
+    n_list = len(ran)
+    n_save = ran[n_list//2]
     with writer.saving(fig, outfile, dpi):
-        for n in range(0, points.shape[0], frame_skip):
-            point = points[n]
-            x, y = point.T
-            fe = fes[n]
-            fex, fey = fe.T
-            if lims is not None:
+            for n in range(0, points.shape[0], frame_skip):
+                point = points[n]
+                x, y = point.T
                 ax.set_xlim(*xlims)
                 ax.set_ylim(*ylims)
-            ax.set_aspect('equal')
-            ax.triplot(X, Y, T)
-            ax.quiver(x, y, fex, fey)
-            ax.triplot(x, y, T)
-            writer.grab_frame()
-            ax.clear()
-            bar.next()
+                ax.set_aspect('equal')
+                ax.triplot(X, Y, T, linestyle='--')
+                ax.triplot(x, y, T)
+                ax.set_title(f'T: {Times[n]:.2f} s')
+                ax.set_xlabel('x')
+                ax.set_ylabel('y')
+                ax2.plot(Times, E_kin+E_pot, label='$E_{total}$')
+                ax2.plot(Times, E_pot, label='$E_{pot}$')
+                ax2.plot(Times, E_kin, label='$E_{kin}$')
+                ax2.axvline(x=Times[n], linestyle='--', color='k')
+                ax2.legend()
+                ax2.set_xlabel('T [s]')
+                ax2.set_ylabel('Energy [J]')
+                if n==n_save:
+                    fig.savefig('handin/triangle.png')
+                # fig.tight_layout()
+                writer.grab_frame()
+                ax.clear()
+                ax2.clear()
+                bar.next()
     bar.finish()
-
 
 def ex_double_bending():
     N = 5000
@@ -331,4 +385,5 @@ def ex_hex():
 
 
 # ex_ball()
-ex_hex()
+# ex_hex()
+ex_debug()
