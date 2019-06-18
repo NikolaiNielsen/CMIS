@@ -254,8 +254,6 @@ def calc_strain_energy(x, y, simplices, De0Inv, lambda_, mu):
     return np.sum(We)
 
 
-
-
 def calc_kin_energy(m, v):
     """
     Calculates the kinetic energy of the system with nodal velocities v and
@@ -377,7 +375,7 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
 
 def make_animation(points, simplices, dt, energies=None, y0=None, lims=None,
                    frame_skip=1, padding=0.5, 
-                   fps=12, outfile='video.mp4'):
+                   fps=12, outfile='video.mp4', save=False):
     """
     Function to make an animation of the mesh.
 
@@ -410,6 +408,12 @@ def make_animation(points, simplices, dt, energies=None, y0=None, lims=None,
 
     writer = anim.FFMpegWriter(fps=fps)
     bar = Bar('Writing movie', max=points.shape[0]//frame_skip)
+    if save:
+        ran = list(range(0, points.shape[0], frame_skip))
+        n_list = len(ran)
+        n_save = ran[n_list//2]
+    else:
+        n_save = -1
     with writer.saving(fig, outfile, dpi):
         for n in range(0, points.shape[0], frame_skip):
             point = points[n]
@@ -432,7 +436,8 @@ def make_animation(points, simplices, dt, energies=None, y0=None, lims=None,
                 ax2.legend()
                 ax2.set_xlabel('T [s]')
                 ax2.set_ylabel('Energy [J]')
-
+            if n == n_save:
+                    fig.savefig(f'{outfile[:-4]}.png')
             # fig.tight_layout()
             writer.grab_frame()
             ax.clear()
