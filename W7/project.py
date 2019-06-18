@@ -193,7 +193,7 @@ def calc_edge_lengths(x):
 
     # unsort and return A_n
     A_n = A_n[inv_perm]
-    return A_n
+    return A_n/2
 
 
 def calc_next_time_step(x, v, m, f_total, dt, mask):
@@ -232,8 +232,28 @@ def calc_pot_energy(m, y, y0=0):
     returns:
     - Epot: float, total potential energy of the system
     """
-    g = 9.8
+    g = 1
+    m = m.reshape(y.shape)
     return np.sum(m*(y-y0)*g)
+
+
+def calc_strain_energy(x, y, simplices, De0Inv, lambda_, mu):
+
+    # As per the wiki on hyperelastic materials. See also http://www.continuummechanics.org/energeticconjugates.html
+    triangles = mesh.all_triangles(simplices, x, y)
+    areas = mesh.calc_areas(triangles)
+    De = calc_De(x, y, simplices)
+    Fe = De @ De0Inv
+    N = areas.size
+    We = np.zeros(N)
+    for n in range(N):
+        # Green strain tensor for each element
+        Ee = (Fe[n].T @ Fe[n] - np.eye(2))/2
+        We[n] = (lambda_/2 * np.trace(Ee)**2 + mu*np.trace(Ee**2))*areas[n]
+    
+    return np.sum(We)
+
+
 
 
 def calc_kin_energy(m, v):
@@ -248,8 +268,10 @@ def calc_kin_energy(m, v):
     returns:
     - Ekin: float, total kinetic energy of the system
     """
-    lv = np.sum(v*v, axis=1)
-    return np.sum(m*lv*0.5)
+    vx, vy = v.T
+    v_sum = vx**2 + vy**2
+    m = m.reshape(v_sum.shape)
+    return np.sum(m*v_sum*0.5)
 
 
 def calc_momentum(m, v):
@@ -319,10 +341,20 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
     points = np.array((x,y)).T
     v = np.zeros(points.shape)
     points_t = np.zeros((N, *points.shape))
+    E_kin = np.zeros(N)
+    E_pot = np.zeros(N)
+    E_str = np.zeros(N)
+    momentum = np.zeros((N, 2))
+    
     De0inv, m, f_ext, ft = calc_intial_stuff(x, y, simplices, b, rho,
                                              t_mask, t)
     m = m.reshape((m.size, 1))
     points_t[0] = points
+    h = y0 if y0 is not None else 0
+    E_kin[0] = calc_kin_energy(m, v)
+    E_pot[0] = calc_pot_energy(m, y, h)
+    E_str[0] = calc_strain_energy(x, y, simplices, De0inv, lambda_, mu)
+    momentum[0] = calc_momentum(m, v)
     bar = Bar('simulating', max=N)
     bar.next()
     for n in range(1, N):
@@ -333,12 +365,18 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
         f_total = ft + fe + f_ext
         points_t[n], v = calc_next_time_step(points_t[n-1], v, m, f_total, dt,
                                              boundary_mask)
+        momentum[n] = calc_momentum(m, v)
+        E_kin[n] = calc_kin_energy(m, v)
+        x, y = points_t[n].T
+        E_pot[n] = calc_pot_energy(m, y, h)
+        E_str[n] = calc_strain_energy(x, y, simplices, De0inv, lambda_, mu)
         bar.next()
     bar.finish()
-    return points_t
+    return points_t, E_pot, E_kin, E_str, momentum
 
 
-def make_animation(points, simplices, dt, lims=None, frame_skip=1, padding=0.5, 
+def make_animation(points, simplices, dt, energies=None, y0=None, lims=None,
+                   frame_skip=1, padding=0.5, 
                    fps=12, outfile='video.mp4'):
     """
     Function to make an animation of the mesh.
@@ -356,19 +394,20 @@ def make_animation(points, simplices, dt, lims=None, frame_skip=1, padding=0.5,
                ".mp4"
     """
     dpi = 200
-    fig, ax = plt.subplots()
+    if energies is not None:
+        fig, (ax, ax2) = plt.subplots(nrows=2,
+                                       gridspec_kw={'height_ratios': [2, 1]})
+        E_pot, E_kin = energies
+    else:
+        fig, ax = plt.subplots()
     N = points.shape[0]
     Times = np.cumsum(dt*np.ones(N))
+    padding = np.array((-padding, padding))
     if lims is not None:
         xlims, ylims = lims
-    # x_all = points[:,:,0].flatten()
-    # y_all = points[:,:,1].flatten()
-    # xlims = [np.amin(x_all) - padding, np.amax(x_all) + padding]
-    # ylims = [np.amin(y_all) - padding, np.amax(y_all) + padding]
-    # ax.set_xlim(*xlims)
-    # ax.set_ylim(*ylims)
-    # ax.set_aspect('equal')
-    # l = ax.triplot(points[0,:,0],points[0,:,1], simplices)
+        xlims = xlims + padding
+        ylims = ylims + padding
+
     writer = anim.FFMpegWriter(fps=fps)
     bar = Bar('Writing movie', max=points.shape[0]//frame_skip)
     with writer.saving(fig, outfile, dpi):
@@ -381,8 +420,24 @@ def make_animation(points, simplices, dt, lims=None, frame_skip=1, padding=0.5,
             ax.set_aspect('equal')
             ax.triplot(x, y, simplices)
             ax.set_title(f'T: {Times[n]:.2f} s')
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
+            if y0 is not None:
+                ax.axhline(y=y0, linestyle='--', color='k')
+            if energies is not None:
+                ax2.plot(Times, E_kin+E_pot, label='$E_{total}$')
+                ax2.plot(Times, E_pot, label='$E_{pot}$')
+                ax2.plot(Times, E_kin, label='$E_{kin}$')
+                ax2.axvline(x=Times[n], linestyle='--', color='k')
+                ax2.legend()
+                ax2.set_xlabel('T [s]')
+                ax2.set_ylabel('Energy [J]')
+
+            # fig.tight_layout()
             writer.grab_frame()
             ax.clear()
+            if energies is not None:
+                ax2.clear()
             bar.next()
     bar.finish()
 
