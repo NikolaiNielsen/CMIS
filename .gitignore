@@ -20,7 +20,7 @@ TexTemplate/*
 *.pyc
 # No numpy binary arrays
 *.npy
-
+*.npz
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
