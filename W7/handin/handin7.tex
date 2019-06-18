@@ -165,6 +165,21 @@ Note that this that all coupling between elements occur in computing the total f
 
 
 \section{Experiments}
+\subsection{An oscillating triangle}
+For the first experiment, we do perhaps the simplest of experiments. We create a computational mesh consisting of 3 vertices, arranged to form an equilateral triangle, with its centre coinciding with the origin. This will be the material coordinates. Next we scale the triangle by $ a>1 $ uniformly. The elastic forces will then tend to contract the triangle towards its relaxed state, but it will overshoot due to the gain in velocity, compressing the triangle, and introducing a restoring force in the opposite direction, forming a harmonic oscillator. It is really 3 harmonic oscillators, with one end at the origin, and the other end at the vertex positions.
+
+We set the traction and any body forces to zero, and use this as an experiment to verify the elastic forces. We also expect the total energy, the sum of potential and kinetic energies, to be constant. Now, since there is no gravity, all potential energy is stored in the elastic forces. If we model the three harmonic oscillators as simple, then their energy is given by $ E_{\text{pot}} = k(\Delta x)^2/2  $, with the spring constant being calculated from the initial displacement and Lame parameters via $ f^e=-k\Delta x $. The initial displacement is $ \Delta x = a $, and a deformation gradient of $ F=aI $. the elastic force for the top vertex then gives a force of
+\begin{equation}\label{key}
+	f^e = -\frac{1}{2} a(a^2+1)(\lambda+\mu)\hat{\V{y}}
+\end{equation}
+for a spring constant of $ k=-f^e/\Delta x = (a^2+1)(\lambda+mu)/2$.
+
+Letting the simulation run and plotting it gives the result seen in figure \textbf{REF}, with the full video available at \textbf{LINK}. As seen, the potential energy oscillates as if the sum of a couple of sine waves, and not as a pure sine wave, which is what one might expect.
+
+However, the values at the peaks of the different energies (kinetic, potential and total) do not decay - there seems to be energy conservation in the system, but our ``choice'' of potential energy function is just not the correct one. This might be because of the material behaving differently under compression than expansion.
+
+
+
 \subsection{Bending the bar}
 For the first experiment we repeat the bending of the bar from the experiments of the finite element method in week 5. We use the provided mesh from that week, attach the left end to a ``wall'' and apply a constant traction to the right end. We also neglect any body forces such as gravity, meaning the only forces are the traction and elastic forces.
 
@@ -183,7 +198,7 @@ Applying gravity is easy: we just apply body force density of $ \rho_0\V{g}=\rho
 
 So whenever a vertex is at or under the floor (defined as the region below some $ y=y_0 $, taken to be $ 0 $ for simplicity), we push it back up to the floor and set its vertical component of velocity to 0. This then induces the deformation, hopefully creating the scenario described above.
 
-We should see conservation of energy in this case: At first, the energy is entirely stored as potential energ, given by $ mg(y-y_0) $. As the ball falls however, the potential energy is converted into kinetic energy, $ mv^2/2 $, until the ball reaches the floor, at which point the ball bounces, turning the downward momentum to upward momentum. The ball then deccelerates converting the kinetic energy back into potential energy.
+We should see conservation of energy in this case: At first, the energy is entirely stored as potential energy. As the ball falls however, the potential energy is converted into kinetic energy, until the ball reaches the floor, at which point the ball bounces, turning the downward momentum to upward momentum. The ball then deccelerates converting the kinetic energy back into potential energy.
 
 Of course, perfect energy conservation depends on whether or not the collision with the floor is elastic or inelastic. I have my doubts that it will be completely elastic due to the fact that we set the vertical velocity component to 0, killing off some of the systems kinetic energy. The hope is that this loss will be stored as ``potential'' energy in the elasticity of the ball. So hopefully we see a nice constant total energy, with potential and kinetic energy trading off each other, back and forth forever.
 
