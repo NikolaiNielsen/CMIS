@@ -249,7 +249,9 @@ def calc_strain_energy(x, y, simplices, De0Inv, lambda_, mu):
     for n in range(N):
         # Green strain tensor for each element
         Ee = (Fe[n].T @ Fe[n] - np.eye(2))/2
-        We[n] = (lambda_/2 * np.trace(Ee)**2 + mu*np.trace(Ee**2))*areas[n]
+        Ee2 = Ee2*Ee2
+        
+        We[n] = (lambda_/2 * np.trace(Ee)**2 + mu*np.sum(Ee2))*areas[n]
     
     return np.sum(We)
 
