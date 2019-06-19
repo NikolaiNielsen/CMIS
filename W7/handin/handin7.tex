@@ -48,8 +48,7 @@ Likewise, the surface of the volume, $ S $ is split into two such that $ S = S_a
 \begin{align*}\label{key}
 	\int_{\partial V_a \cup \partial V_b} \V{f}(\V{x})\D \V{n} \ud S &= \int_{\partial V_a}  + \int_{\partial V_b}  \\
 	&= \int_{S_a}+\int_{S_{ab}}+\int_{S_b} - \int_{S_{ab}}\\
-	& = \int_{S_a\cup S_b} \\
-	&= \int_S 
+	&= \int_{S_a\cup S_b} = \int_S 
 \end{align*}
 where we have omitted the integrands and merely represented the integrals schematically. Furthermore there is a minus in front of the second integral over $ S_{ab} $ since for one control volume the surface normal points one way, and for the other it is flipped, leading to the same integral, but with a different sign.
 
@@ -65,7 +64,7 @@ The governing equation is
 \begin{equation}\label{key}
 	\rho_0 \ddot{\V{x}} = \V{b}_0 + \grad_{0} \D \V{P}
 \end{equation}
-where $ \rho $ is the mass density, $ \V{b} $ is the body force density (gravity, viscosity), and $ \V{P} $ is the first Piola-Kirchhoff stress tensor. A subscript of zero means the function is dependent on material, or undeformed, coordinates, meaning the last term is the divergence of the first Piola-Kirchhoff stress tensor, in material coordinates.
+where $ \rho $ is the mass density, $ \V{b} $ is the body force density (gravity or viscosity, for example), and $ \V{P} $ is the first Piola-Kirchhoff stress tensor. A subscript of zero means the function is dependent on material, or undeformed, coordinates, meaning the last term is the divergence of the first Piola-Kirchhoff stress tensor, in material coordinates.
 
 We impose boundary conditions on the system in the form of a nodal traction field, defined by
 \begin{equation}\label{key}
@@ -78,6 +77,12 @@ In our discretization we use a triangular mesh as the computational domain, with
 We further assume the mass density of the system to be constant, as we work with homogeneous materials, and only one at a time. 
 
 \subsection{Notation, nomenclature and the control volumes}
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{CV.png}
+	\caption{Sample control volume. The mesh is shown as dashed lines, whilst the control volume is shown as fully drawn lines. Also highlighted is the $ e $'th element, with vertices $ i,j,k $, along with the integration path used to simplify formula \ref{eq:integration}}
+	\label{fig:CV}
+\end{figure}
 As with many problems, a good notation is half the battle. As mentioned before, a subscript of 0 (or capital letters for stuff other than stress tensors) denotes material coordinates, whilst lower letters and no subscript denotes spatial coordinates. We denote a element edge on the boundary of the domain as free, if there is no traction field applied to it, and non-free if there is.
 
 The control volume we employ is slightly different than the centroid dual vertex centred control volume from last week. For each vertex $ i $, we join the incenters of each element $ e $ the vertex is a part of, to the midpoint between the vertex in question ($ i $), and the other vertices in the element $ j,k $ (see figure \textbf{ref} for a sample control volume). Using this control volume turns out to be beneficial for this governing equation with our approximations, as we shall soon see.
@@ -107,7 +112,7 @@ where $ f_i^{\text{body}} =A_i\V{b}_0$ is the total body force on the control vo
 If $ S^e_{\gamma} $ is on the boundary of the domain, then it is either free or non-free. In the free case $ \V{P}\hat{\V{N}} =\V{t}=0$ and the integral vanishes. In the non-free case the integral is just $ \V{t}l^e_{\gamma}$, where $ l^e_{\gamma} $ is the length of $ S^e_{\gamma} $ ($ \V{t} $ is constant over the edge, so goes outside the integral, and the integral of 1 is just the edge length).
 
 With this we can split up the piecewise integral further into boundary edges and inner edges. The integral over inner edges can be calculated without even using the $ \alpha, \beta $ edges if we utilize the closed contour mentioned before. Since we assume that the tensor $ \V{P} $ is constant over each element, the integral of a closed contour on the element is zero (like that of a gradient or any field with a vanishing curl):
-\begin{equation}\label{key}
+\begin{equation}\label{eq:integration}
 	\oint_S \V{P}^e\hat{\V{N}} \ud S = 0
 \end{equation}
 Now we let $ S = S^e_{ji} \cup S^e_{ik} \cup S^e_{\alpha} \cup S^e_{\beta} $, giving
@@ -162,39 +167,74 @@ To evolve the system in time by one time step, we need to calculate the total fo
 
 Note that this that all coupling between elements occur in computing the total forces (the elastic forces, actually), and we do not need to perform any matrix assembly and solving, in contrast to all the other weeks assignments (except for semi-lagrangian impicit time integration).
 
+\subsection{Parameters and energies}
+For all of this weeks experiments we will be using a Young Modulus $ E =1000 $ Pa, Poisson ratio $ \nu=0.3 $, mass density $ \rho_0=10  $kg/m$ ^2 $. The Lame parameters are calculated from the equations
+\begin{equation}\label{key}
+	\lambda = \frac{E\nu}{(1+\nu)(1-2\nu)}, \quad \mu=\frac{E}{2(1+\nu)}
+\end{equation}
+These values are pitiful. Especially the Young Modulus. Steel, for example, has a Young Modulus of around 100 GPa, a difference of 7 orders of magnitude! So we are essentially working with solidified pudding.
+
+In the experiments we will also calculate the energy present in the system. We will calculate 3 different energy contributions: kinetic, gravitational potential and strain energy. The first two are given by
+\begin{equation}\label{key}
+	E_{\text{kin}} = \sum_{i} \frac{1}{2} m_i v_i^2, \quad E_{\text{pot}} = \sum_{i} m_i g (y_i-y_0)
+\end{equation}
+where the sums are over all vertices, and $ y_0 $ is some arbitrarily defined 0-point for the gravitational energy, taken to be 0 for all experiments. The strain energy is found by integrating the strain energy density function $ \psi $ over the whole material. The function is given by
+\begin{equation}\label{key}
+\psi = \frac{1}{2} \lambda \tr (\V{E})^2 + \mu \tr (\V{E}^2)
+\end{equation}
+but since $ \V{E} $ is constant over each element, we can replace the integral with a sum over elements:
+\begin{equation}\label{key}
+	E_{\text{str}} = \int_V \psi \ud V = \sum_{e} \psi^e A^e_0
+\end{equation}
+where $ A^e_0 $ is the area of the $ e $'th element, in material coordinates.
 
 
 \section{Experiments}
 \subsection{An oscillating triangle}
-For the first experiment, we do perhaps the simplest of experiments. We create a computational mesh consisting of 3 vertices, arranged to form an equilateral triangle, with its centre coinciding with the origin. This will be the material coordinates. Next we scale the triangle by $ a>1 $ uniformly. The elastic forces will then tend to contract the triangle towards its relaxed state, but it will overshoot due to the gain in velocity, compressing the triangle, and introducing a restoring force in the opposite direction, forming a harmonic oscillator. It is really 3 harmonic oscillators, with one end at the origin, and the other end at the vertex positions.
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{triangle.png}
+	\caption{Snapshot of the oscillating triangle simulation. The material mesh are plotted with dashed lines, while the spatial mesh is plotted with solid lines. Also shown is the energy of the system, as a function of time. While the energy is not constant, there does not seem to be any dissipation of energy either.}
+	\label{fig:triangle_sim}
+\end{figure}
+For the first experiment, we do perhaps the simplest of experiments. We create a computational mesh consisting of 3 vertices, arranged to form an equilateral triangle, with its centre coinciding with the origin. This will be the material coordinates. Next we scale the triangle by $ a>1 $ uniformly. The elastic forces will then tend to contract the triangle towards its relaxed state, but it will overshoot due to the gain in velocity, compressing the triangle, and introducing a restoring force in the opposite direction, forming a harmonic oscillator.
 
-We set the traction and any body forces to zero, and use this as an experiment to verify the elastic forces. We also expect the total energy, the sum of potential and kinetic energies, to be constant. Now, since there is no gravity, all potential energy is stored in the elastic forces. If we model the three harmonic oscillators as simple, then their energy is given by $ E_{\text{pot}} = k(\Delta x)^2/2  $, with the spring constant being calculated from the initial displacement and Lame parameters via $ f^e=-k\Delta x $. The initial displacement is $ \Delta x = a $, and a deformation gradient of $ F=aI $. the elastic force for the top vertex then gives a force of
+We set the traction and any body forces to zero, and use this as an experiment to verify the elastic forces. We also expect the total energy, the sum of strain and kinetic energies, to be constant.
+
+Letting the simulation run and plotting it gives the result seen in figure \ref{fig:triangle_sim}, with the full video available at \textbf{LINK}. As seen, the potential energy oscillates but with differing amplitudes for compression and expansion, so there is either an error in calculating the strain energy, or some other energy contribution we are forgetting. The gravitational potential energy is constant, since the centre of mass is at the geometric centre, which does not move, so this is not the cause for the mismatch (it does not make sense to calculate it either. By not including it we essentially set $ g=0 $, which would lead to no gravitational potential energy either). Further, calculating the strain energy analytically for the system with a deformation gradient of $ aI $ gives
 \begin{equation}\label{key}
-	f^e = -\frac{1}{2} a(a^2+1)(\lambda+\mu)\hat{\V{y}}
+	E_{\text{str}} = \frac{\sqrt{3}}{8} (a^2-1) (\lambda+\mu)
 \end{equation}
-for a spring constant of $ k=-f^e/\Delta x = (a^2+1)(\lambda+mu)/2$.
+Calculating this expression explicitly in the code and comparing it to the starting strain value calculated by the simulation yields an expression which is accurate down to a couple of machine epsilon.
 
-Letting the simulation run and plotting it gives the result seen in figure \textbf{REF}, with the full video available at \textbf{LINK}. As seen, the potential energy oscillates as if the sum of a couple of sine waves, and not as a pure sine wave, which is what one might expect.
+So it looks like there is some contribution which we are forgetting.
 
-However, the values at the peaks of the different energies (kinetic, potential and total) do not decay - there seems to be energy conservation in the system, but our ``choice'' of potential energy function is just not the correct one. This might be because of the material behaving differently under compression than expansion.
+However, the values at the peaks of the different energies (kinetic, strain and total) do not decay - there seems to be no dissipation of energy, which is like we expect. This is also the case when running the simulation for 10 times as long. Though the energy graph becomes a blurry mess, so we decided against plotting this.
 
 
 
 \subsection{Bending the bar}
-For the first experiment we repeat the bending of the bar from the experiments of the finite element method in week 5. We use the provided mesh from that week, attach the left end to a ``wall'' and apply a constant traction to the right end. We also neglect any body forces such as gravity, meaning the only forces are the traction and elastic forces.
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{bar.png}
+	\caption{Snapshot of the second experiment. Notice that the energy increases rapidly at the start of the simulation, as the traction performs work on the system. The total energy does not settle to a constant after the traction is released at $ T=0.5$s as one would expect. We do see a trade-off in the strain and kinetic energy as the bar bends back and forth, though.}
+	\label{fig:bar}
+\end{figure}
+For the second experiment we repeat the bending of the bar from the experiments of the finite element method in week 5. We use the provided mesh from that week, attach the left end to a ``wall'' and apply a constant traction to the right end for some time period ($ T = 0.5  $ s), whereupon we set the traction to 0. This will act as an ``initial displacement'' like for the oscillating triangle. Unlike the triangle though, we have an added ``initial'' velocity, and some build-up of errors. We also neglect any body forces such as gravity, meaning the only forces are the traction and elastic forces.
 
 In attaching the left end to the wall we essentially negate all forces on these nodes (The wall exerts an equal force on the bar, so to speak), such that these nodes never move. In practice this means we just set the velocity for these nodes to 0, and never update them.
 
-At the start of the simulation, the bar is undeformed, which means $ \V{D}^e = \V{D}^e_0 $ and $ \V{F} = \V{I} $, so there will be no elastic forces on the bar, and the only motion will be due to the traction. As the system evolves, the bar will bend, and the elastic forces will increase in magnitude until they rival the traction, and the system experiences no acceleration. The bar will continue to overshoot this point, further increasing the deformation, but with decceleration, until the bar is ``fully bent''. At this point the bar will start to rectify itself until it reaches the starting location with a net upwards velocity but now only a downwards force.
+As the bar is released we expect it to behave like a harmonic oscillator with an initial displacement and initial velocity different from 0. The result is seen in figure \ref{fig:bar}, with the full simulation available at \textbf{LINK}.
 
-In essence, this is a harmonic oscillator, and should act as such. We therefore expect the bar to oscillate for eternity, as long as there is no dampening of the system, especially now that we employ a symplectic integrator, which conserves energy (for isolated systems, that is).
+At first, the traction performs work on the bar, which is why we see the total energy increase for the first 0.5 seconds. Then a peculiar thing happens: The bar starts to wobble, and we se ``shock-waves'' in the material, as the discontinuity in acceleration propagates back and forth through the system - hitting the wall and being reflected back (with a negative amplitude), which is precisely what we see if we have a rope attached to a wall, and send a transverse wave down the length of it!
 
+This is also what gives the ``wobbles'' in the trade-off between kinetic and strain energy. An observation leading to slight disconcert is the fact that the total energy in the system continues to increase as the 
 
 
 \subsection{A bouncing ball}
 We can also use this method to simulate a bouncing ball. To do this we need a circular mesh, gravity and a procedure for handling collision with the floor.
 
-Applying gravity is easy: we just apply body force density of $ \rho_0\V{g}=\rho_0[0, -9.8]^T $. Next the procedure for the floor. When a ball hits a floor, the upwards momentum of the ball will die out (if the floor is perfectly rigid), causing the ball to compress. This introduces a deformation gradient and elastic forces in the vertical direction, counteracting the gravitational forces. At some point, these forces are greater than the gravitational pull, causing the ball to accelerate and jump back up.
+Applying gravity is easy: we just apply body force density of $ \rho_0\V{g}=\rho_0[0, -g]^T $. Next the procedure for the floor. When a ball hits a floor, the upwards momentum of the ball will die out (if the floor is perfectly rigid), causing the ball to compress. This introduces a deformation gradient and elastic forces in the vertical direction, counteracting the gravitational forces. At some point, these forces are greater than the gravitational pull, causing the ball to accelerate and jump back up.
 
 So whenever a vertex is at or under the floor (defined as the region below some $ y=y_0 $, taken to be $ 0 $ for simplicity), we push it back up to the floor and set its vertical component of velocity to 0. This then induces the deformation, hopefully creating the scenario described above.
 
