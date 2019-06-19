@@ -237,11 +237,12 @@ def calc_pot_energy(m, y, y0=0):
     return np.sum(m*(y-y0)*g)
 
 
-def calc_strain_energy(x, y, simplices, De0Inv, lambda_, mu):
-
-    # As per the wiki on hyperelastic materials. See also http://www.continuummechanics.org/energeticconjugates.html
-    triangles = mesh.all_triangles(simplices, x, y)
-    areas = mesh.calc_areas(triangles)
+def calc_strain_energy(x, y, simplices, De0Inv, lambda_, mu, areas):
+    """
+    Compute the strain energy in the system.
+    """
+    # As per the wiki on hyperelastic materials. 
+    # See also http://www.continuummechanics.org/energeticconjugates.html
     De = calc_De(x, y, simplices)
     Fe = De @ De0Inv
     N = areas.size
@@ -249,7 +250,7 @@ def calc_strain_energy(x, y, simplices, De0Inv, lambda_, mu):
     for n in range(N):
         # Green strain tensor for each element
         Ee = (Fe[n].T @ Fe[n] - np.eye(2))/2
-        Ee2 = Ee2*Ee2
+        Ee2 = Ee*Ee
         
         We[n] = (lambda_/2 * np.trace(Ee)**2 + mu*np.sum(Ee2))*areas[n]
     
@@ -310,7 +311,7 @@ def calc_lame_parameters(E, nu):
 
 def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
              t=np.array((0, -1)), rho=1, t_mask=None, boundary_mask=None,
-             y0=None):
+             y0=None, T_stopt=None):
     """
     Simulates the system
 
@@ -339,6 +340,7 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
         t_mask = x == np.amax(x)
     n_p = -1
     points = np.array((x,y)).T
+    areas = mesh.calc_areas(mesh.all_triangles(simplices, x, y))
     v = np.zeros(points.shape)
     points_t = np.zeros((N, *points.shape))
     E_kin = np.zeros(N)
@@ -353,13 +355,17 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
     h = y0 if y0 is not None else 0
     E_kin[0] = calc_kin_energy(m, v)
     E_pot[0] = calc_pot_energy(m, y, h)
-    E_str[0] = calc_strain_energy(x, y, simplices, De0inv, lambda_, mu)
+    E_str[0] = calc_strain_energy(x, y, simplices, De0inv, lambda_, mu, areas)
     momentum[0] = calc_momentum(m, v)
     bar = Bar('simulating', max=N)
     bar.next()
     for n in range(1, N):
         if y0 is not None:
             points_t[n-1], v = floor_(points_t[n-1], y0=y0, v=v)
+        T = dt*n
+        if T_stopt <= T and T_stopt is not None:
+            # print('stop T')
+            ft = 0
         x, y = points_t[n-1].T
         fe = calc_all_fe(x, y, simplices, cvs, De0inv, lambda_, mu, n=True if n==n_p else False)
         f_total = ft + fe + f_ext
@@ -369,7 +375,8 @@ def simulate(x, y, simplices, cvs, dt=1, N=10, lambda_=1, mu=1, b=np.zeros(2),
         E_kin[n] = calc_kin_energy(m, v)
         x, y = points_t[n].T
         E_pot[n] = calc_pot_energy(m, y, h)
-        E_str[n] = calc_strain_energy(x, y, simplices, De0inv, lambda_, mu)
+        E_str[n] = calc_strain_energy(x, y, simplices, De0inv, lambda_, mu,
+                                      areas)
         bar.next()
     bar.finish()
     return points_t, E_pot, E_kin, E_str, momentum
@@ -397,7 +404,15 @@ def make_animation(points, simplices, dt, energies=None, y0=None, lims=None,
     if energies is not None:
         fig, (ax, ax2) = plt.subplots(nrows=2,
                                        gridspec_kw={'height_ratios': [2, 1]})
-        E_pot, E_kin = energies
+        if len(energies) == 3:
+            E_pot, E_kin, E_str = energies
+            if E_pot is not None:
+                E_total = E_pot + E_kin + E_str
+            else:
+                E_total = E_kin + E_str
+        else:
+            E_pot, E_kin = energies
+            E_total = E_pot + E_kin
     else:
         fig, ax = plt.subplots()
     N = points.shape[0]
@@ -431,9 +446,12 @@ def make_animation(points, simplices, dt, energies=None, y0=None, lims=None,
             if y0 is not None:
                 ax.axhline(y=y0, linestyle='--', color='k')
             if energies is not None:
-                ax2.plot(Times, E_kin+E_pot, label='$E_{total}$')
-                ax2.plot(Times, E_pot, label='$E_{pot}$')
+                ax2.plot(Times, E_total, label='$E_{total}$')
+                if E_pot is not None:
+                    ax2.plot(Times, E_pot, label='$E_{pot}$')
                 ax2.plot(Times, E_kin, label='$E_{kin}$')
+                if len(energies) == 3:
+                    ax2.plot(Times, E_str, label='$E_{str}$')
                 ax2.axvline(x=Times[n], linestyle='--', color='k')
                 ax2.legend()
                 ax2.set_xlabel('T [s]')
